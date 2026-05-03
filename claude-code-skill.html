@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TBET0LQRMF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-TBET0LQRMF');
+</script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACDL to Code - Claude Code Skill</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    .hero {
+      padding: 120px 24px 40px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: rgba(255,255,255,0.6);
+      max-width: 700px;
+      margin: 0 auto 24px;
+      line-height: 1.7;
+    }
+
+    /* Skill content section */
+    .skill-section {
+      background: #0a0a0a;
+      padding: 40px 24px 60px;
+    }
+
+    .skill-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .skill-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .skill-header h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 0;
+    }
+
+    .skill-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-icon:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    .btn-icon.copied {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #10b981;
+    }
+
+    .btn-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .skill-box {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .skill-content {
+      padding: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.8);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .skill-content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .skill-content::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.03);
+    }
+
+    .skill-content::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+    }
+
+    /* Instructions section */
+    .instructions-section {
+      background: linear-gradient(180deg, #f8f9fa 0%, #fff 100%);
+      padding: 48px 24px 56px;
+    }
+
+    .instructions-section .section-header {
+      margin-bottom: 40px;
+    }
+
+    .instructions-section .section-header h2 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #0a0a0a;
+      letter-spacing: -0.02em;
+    }
+
+    .instructions-section .section-header p {
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: rgba(10,10,10,0.5);
+      margin-top: 8px;
+    }
+
+    .instructions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .instruction-card {
+      background: #fff;
+      border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 20px;
+      padding: 0;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+
+    .instruction-card h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 0;
+      padding: 24px 28px;
+      color: #fff;
+      background: linear-gradient(135deg, #7877c6, #5d5cb8);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .instruction-card h3 svg {
+      width: 22px;
+      height: 22px;
+      color: rgba(255,255,255,0.9);
+    }
+
+    .instruction-steps {
+      list-style: none;
+      padding: 20px 28px 24px;
+      margin: 0;
+    }
+
+    .instruction-steps li {
+      display: flex;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+      color: #0a0a0a;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      align-items: flex-start;
+    }
+
+    .instruction-steps li:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .instruction-steps li:first-child {
+      padding-top: 0;
+    }
+
+    .step-num {
+      width: 26px;
+      height: 26px;
+      background: linear-gradient(135deg, #7877c6, #5d5cb8);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(120, 119, 198, 0.3);
+    }
+
+    .code-inline {
+      background: rgba(120, 119, 198, 0.1);
+      border: 1px solid rgba(120, 119, 198, 0.25);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: #6865b4;
+      font-weight: 500;
+    }
+
+    /* Use cases section */
+    .use-cases-section {
+      background: #0a0a0a;
+      padding: 60px 24px;
+    }
+
+    .use-cases-section .section-header {
+      margin-bottom: 32px;
+    }
+
+    .use-cases-section .section-header h2,
+    .use-cases-section .section-header p {
+      color: #fff;
+    }
+
+    .use-cases-section .section-header p {
+      color: rgba(255,255,255,0.8);
+      font-size: 1.3rem;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+
+    .use-cases-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .use-case-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 28px;
+    }
+
+    .use-case-card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #fff;
+    }
+
+    .use-case-card p {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    @media (max-width: 900px) {
+      .instructions-grid {
+        grid-template-columns: 1fr;
+      }
+      .use-cases-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .skill-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+  <a href="index.html" class="nav-logo">ACDL</a>
+  <div class="nav-links">
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle">Learn</button>
+      <div class="nav-dropdown-menu">
+        <a href="tutorial.html">Getting Started</a>
+        <a href="syntax-reference.html">Documentation</a>
+        <a href="examples/index.html">Examples</a>
+      </div>
+    </div>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle">Tools</button>
+      <div class="nav-dropdown-menu">
+        <a href="visualizer.html?example=react_base" class="external">Live Editor</a>
+        <a href="vscode.html">VSCode Extension</a>
+        <a href="claude-code-skill.html">Claude Code Skill</a>
+      </div>
+    </div>
+    <a href="#" class="external">Paper</a>
+    <a href="https://github.com/nogaplab/ACDL" class="external">GitHub</a>
+  </div>
+  <button class="nav-toggle" onclick="document.querySelector('nav').classList.toggle('nav-open')" aria-label="Toggle menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+</nav>
+
+  <section class="hero">
+    <h1>Generate Code from ACDL</h1>
+    <p>Use this skill file to teach Claude Code how to implement LLM agent systems from your ACDL specifications. Write the ACDL, get the code skeleton.</p>
+    <div class="hero-buttons">
+      <a href="acdl-skill.md" download="acdl-skill.md" class="btn btn-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Download Skill File
+      </a>
+      <a href="visualizer.html" class="btn btn-secondary">Try Live Editor</a>
+    </div>
+  </section>
+
+  <section class="skill-section">
+    <div class="skill-container">
+      <div class="skill-header">
+        <h2>acdl-skill.md</h2>
+        <div class="skill-actions">
+          <button class="btn-icon" id="copyBtn" onclick="copySkillContent()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span id="copyText">Copy</span>
+          </button>
+          <a href="acdl-skill.md" download="acdl-skill.md" class="btn-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download
+          </a>
+        </div>
+      </div>
+      <div class="skill-box">
+        <pre class="skill-content" id="skillContent">Loading skill content...</pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="section instructions-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Workflow</h2>
+        <p>From ACDL specification to working code</p>
+      </div>
+
+      <div class="instructions-grid">
+        <div class="instruction-card">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+            Step 1: Write Your ACDL
+          </h3>
+          <ol class="instruction-steps">
+            <li>
+              <span class="step-num">1</span>
+              <span>Use the <a href="visualizer.html" style="color: #7877c6;">Live Editor</a> to write your ACDL spec</span>
+            </li>
+            <li>
+              <span class="step-num">2</span>
+              <span>Preview the prompt structure visually</span>
+            </li>
+            <li>
+              <span class="step-num">3</span>
+              <span>Copy your finished ACDL specification</span>
+            </li>
+          </ol>
+        </div>
+        <div class="instruction-card">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            Step 2: Generate Code
+          </h3>
+          <ol class="instruction-steps">
+            <li>
+              <span class="step-num">1</span>
+              <span>Download the skill file or copy it above</span>
+            </li>
+            <li>
+              <span class="step-num">2</span>
+              <span>In Claude Code, attach with <span class="code-inline">@acdl-skill.md</span></span>
+            </li>
+            <li>
+              <span class="step-num">3</span>
+              <span>Paste your ACDL and ask for the implementation</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section use-cases-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Example Prompt</h2>
+        <p>What to say after attaching the skill and your ACDL</p>
+      </div>
+
+      <div class="use-cases-grid" style="grid-template-columns: 1fr;">
+        <div class="use-case-card" style="max-width: 700px; margin: 0 auto;">
+          <p style="font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; line-height: 1.8;">
+            "Generate the Python implementation for this ACDL spec. Include the data structures, template constants, and the build_messages() function."
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+  <p>ACDL &mdash; Agentic Context Description Language &middot; <a href="https://github.com/acdlang26/acdl" class="external">GitHub</a></p>
+</footer>
+
+  <script id="skillTemplate" type="text/template"># ACDL to Code Implementation Skill
+
+You are an expert at implementing LLM agent systems from ACDL (Agentic Context Description Language) specifications. Given an ACDL spec, you generate the code that builds the prompt/messages array for LLM API calls.
+
+## Your Task
+
+When given an ACDL specification, generate:
+1. A `build_messages()` function that constructs the messages array
+2. Data structures for storing conversation history and state
+3. Helper functions for templates and context variable lookups
+
+## ACDL to Code Mapping
+
+### Roles → Message Objects
+
+| ACDL | Python Code |
+|------|-------------|
+| `S: content` | `{"role": "system", "content": content}` |
+| `U: content` | `{"role": "user", "content": content}` |
+| `A: content` | `{"role": "assistant", "content": content}` |
+| `T: content` | `{"role": "tool", "content": content, "tool_call_id": id}` |
+
+### Time Indices → Parameters/Loops
+
+| ACDL | Python Code |
+|------|-------------|
+| `@T` | `turn` (current turn parameter) |
+| `@t` | `t` (loop variable) |
+| `@T.I` | `(turn, substep)` tuple |
+| `@t.substeps` | `len(history[t].tool_calls)` |
+| `range(1, @T)` | `range(1, turn)` |
+
+### Context Variables → Data Lookups
+
+| ACDL | Python Code |
+|------|-------------|
+| `env.user_input[@t]` | `history[t].user_input` |
+| `sys.tool_response[@t]` | `history[t].tool_response` |
+| `resp.reasoning[@t]` | `history[t].assistant_response` |
+| `env.x[@T]` | `current_input.x` or function parameter |
+
+### Templates → String Constants
+
+| ACDL | Python Code |
+|------|-------------|
+| `SYSTEM_PROMPT` | `SYSTEM_PROMPT = """..."""` |
+| `AVAILABLE_TOOLS` | `AVAILABLE_TOOLS = """..."""` |
+| `TEMPLATE(arg)` | `def template(arg): return f"..."` |
+
+### Control Flow → Python Control Flow
+
+| ACDL | Python Code |
+|------|-------------|
+| `ForEach(@t: range(1, @T)) { ... }` | `for t in range(1, turn): ...` |
+| `ForEach(item: $list) { ... }` | `for item in items: ...` |
+| `If condition { ... }` | `if condition: ...` |
+| `Switch x { Case "a": {...} }` | `if x == "a": ... elif ...` |
+| `Name x := expr` | `x = expr` |
+
+## Implementation Pattern
+
+For any ACDL spec, generate this structure:
+
+```python
+from dataclasses import dataclass
+from typing import List, Optional, Any
+
+# === TEMPLATES ===
+# Static text blocks from ALL_CAPS elements
+
+SYSTEM_PROMPT = """
+[Fill in system instructions]
+"""
+
+# === DATA STRUCTURES ===
+
+@dataclass
+class TurnHistory:
+    user_input: str
+    assistant_response: Optional[str] = None
+    tool_calls: List[Any] = None
+    tool_responses: List[str] = None
+
+    def __post_init__(self):
+        if self.tool_calls is None:
+            self.tool_calls = []
+        if self.tool_responses is None:
+            self.tool_responses = []
+
+@dataclass
+class AgentState:
+    history: List[TurnHistory]
+    # Add additional state fields as needed
+
+    def __post_init__(self):
+        if self.history is None:
+            self.history = []
+
+# === MESSAGE BUILDER ===
+
+def build_messages(turn: int, state: AgentState, current_input: str) -> List[dict]:
+    messages = []
+
+    # [Generated from ACDL spec]
+
+    return messages
+```
+
+## Examples
+
+### Example 1: Basic Chat Agent
+
+**ACDL:**
+```acdl
+ChatAgent[@T]: {
+    S: SYSTEM_PROMPT
+    ForEach(@t: range(1, @T)) {
+        U: env.user_input[@t]
+        A: resp.response[@t]
+    }
+    U: env.user_input[@T]
+}
+```
+
+**Generated Code:**
+```python
+SYSTEM_PROMPT = """
+You are a helpful assistant.
+"""
+
+def build_messages(turn: int, state: AgentState, current_input: str) -> List[dict]:
+    messages = []
+
+    # S: SYSTEM_PROMPT
+    messages.append({"role": "system", "content": SYSTEM_PROMPT})
+
+    # ForEach(@t: range(1, @T))
+    for t in range(1, turn):
+        # U: env.user_input[@t]
+        messages.append({"role": "user", "content": state.history[t-1].user_input})
+        # A: resp.response[@t]
+        messages.append({"role": "assistant", "content": state.history[t-1].assistant_response})
+
+    # U: env.user_input[@T]
+    messages.append({"role": "user", "content": current_input})
+
+    return messages
+```
+
+### Example 2: ReAct Agent with Tools
+
+**ACDL:**
+```acdl
+ReactAgent[@T]: {
+    S: {
+        INSTRUCTIONS
+        AVAILABLE_TOOLS
+    }
+    U: env.user_input[@1]
+    ForEach(@t: range(1, @T)) {
+        A: {
+            resp.reasoning[@t]
+            sys.tool_call[@t]
+        }
+        T: sys.tool_call[@t].response
+    }
+}
+```
+
+**Generated Code:**
+```python
+INSTRUCTIONS = """
+You are a ReAct agent. Think step by step, then use tools.
+"""
+
+AVAILABLE_TOOLS = """
+Available tools:
+- search(query): Search the web
+- calculate(expr): Evaluate a math expression
+"""
+
+def build_messages(turn: int, state: AgentState, initial_input: str) -> List[dict]:
+    messages = []
+
+    # S: { INSTRUCTIONS, AVAILABLE_TOOLS }
+    messages.append({
+        "role": "system",
+        "content": INSTRUCTIONS + "\n\n" + AVAILABLE_TOOLS
+    })
+
+    # U: env.user_input[@1]
+    messages.append({"role": "user", "content": initial_input})
+
+    # ForEach(@t: range(1, @T))
+    for t in range(1, turn):
+        # A: { resp.reasoning[@t], sys.tool_call[@t] }
+        messages.append({
+            "role": "assistant",
+            "content": state.history[t-1].assistant_response,
+            "tool_calls": state.history[t-1].tool_calls
+        })
+        # T: sys.tool_call[@t].response
+        for i, tool_call in enumerate(state.history[t-1].tool_calls):
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call["id"],
+                "content": state.history[t-1].tool_responses[i]
+            })
+
+    return messages
+```
+
+### Example 3: RAG Agent
+
+**ACDL:**
+```acdl
+RAGAgent[@T]: {
+    S: INSTRUCTIONS
+    U: {
+        Name docs := k_relevant_docs(env.user_input[@T], 5)
+        ForEach(doc: $docs) {
+            doc.source
+            doc.content
+        }
+        ANSWER_FROM_DOCS
+        env.user_input[@T]
+    }
+}
+```
+
+**Generated Code:**
+```python
+INSTRUCTIONS = """
+You answer questions based on provided documents.
+"""
+
+ANSWER_FROM_DOCS = """
+Based on the documents above, answer:
+"""
+
+def k_relevant_docs(query: str, k: int) -> List[dict]:
+    # TODO: Implement retrieval logic
+    pass
+
+def build_messages(turn: int, state: AgentState, current_input: str) -> List[dict]:
+    messages = []
+
+    # S: INSTRUCTIONS
+    messages.append({"role": "system", "content": INSTRUCTIONS})
+
+    # Name docs := k_relevant_docs(env.user_input[@T], 5)
+    docs = k_relevant_docs(current_input, 5)
+
+    user_content = ""
+    # ForEach(doc: $docs)
+    for doc in docs:
+        user_content += f"Source: {doc['source']}\n{doc['content']}\n\n"
+
+    user_content += ANSWER_FROM_DOCS + "\n" + current_input
+    messages.append({"role": "user", "content": user_content})
+
+    return messages
+```
+
+## Output Format
+
+When given an ACDL specification, provide:
+
+1. **Template constants** - String constants for all ALL_CAPS templates
+2. **Data structures** - Classes for history and state management
+3. **Helper functions** - Any functions referenced (like `k_relevant_docs`)
+4. **`build_messages()` function** - The main message builder with comments showing which ACDL line each section implements
+5. **Usage example** - Brief example of how to call the function
+
+## Guidelines
+
+1. **Comment each section** - Show which ACDL line the code implements
+2. **Use 0-indexed history** - ACDL uses 1-indexed, Python uses 0-indexed
+3. **Handle nested loops** - Sub-steps require inner iteration over tool calls
+4. **Leave TODOs** - Mark template content and retrieval functions as TODO
+5. **Match message format** - Use OpenAI/Anthropic message format conventions
+6. **Preserve order** - Message order must match ACDL specification order
+</script>
+
+  <script>
+    // Load embedded skill content
+    document.getElementById('skillContent').textContent =
+      document.getElementById('skillTemplate').textContent.trim();
+
+    function copySkillContent() {
+      const content = document.getElementById('skillContent').textContent;
+      navigator.clipboard.writeText(content).then(() => {
+        const btn = document.getElementById('copyBtn');
+        const text = document.getElementById('copyText');
+        btn.classList.add('copied');
+        text.textContent = 'Copied!';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          text.textContent = 'Copy';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
