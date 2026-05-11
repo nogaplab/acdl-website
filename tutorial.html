@@ -622,29 +622,19 @@
         <h2>What is ACDL?</h2>
       </div>
       <p>
-        <strong>ACDL (Agentic Context Description Language)</strong> is a way to describe the structure of LLM prompts
-        and agent conversations. Think of it as a blueprint for the context your agent constructs and sends to the LLM.
+        <strong>ACDL (Agentic Context Description Language)</strong> is a notation for describing the structure
+        of agent contexts—the system instructions, user messages, tool calls, conversation history, and
+        conditional logic that make up what your agent sends to the LLM.
       </p>
       <p>
-        When you build an AI agent, you need to manage complex conversations: system instructions, user messages,
-        tool calls, loops through history, conditional logic. ACDL gives you a clean way to describe all of this
-        that is easy to understand and allows you to compare different implementations easily.
+        A <strong>prompt</strong> is what gets sent to the LLM at a single point in time. A <strong>context</strong>
+        is the pattern that describes how prompts are constructed and evolve across turns—which parts stay fixed,
+        which parts accumulate, and how the structure changes dynamically. ACDL describes contexts, not just prompts.
       </p>
-
-      <div class="explanation">
-        <div class="explanation-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-        </div>
-        <div class="explanation-text">
-          <strong>Why not just write prompts directly?</strong> As your agent grows more complex,
-          ACDL helps you see the structure at a glance, share it with others, and reason about how context
-          evolves over time.
-        </div>
-      </div>
+      <p>
+        Ad hoc prose or prompt excerpts are imprecise, hard to verify, and make comparing implementations difficult.
+        ACDL provides a clean, precise notation that is easy to read and compare across different systems.
+      </p>
     </section>
 
     <!-- Step 2: Your First Prompt -->
