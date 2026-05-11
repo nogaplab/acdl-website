@@ -615,65 +615,6 @@
   </section>
 
   <div class="tutorial-content">
-
-    <!-- Quick Start Section -->
-    <section id="quickstart" class="step">
-      <div class="step-header">
-        <div class="step-number">Q</div>
-        <h2>Quick Start</h2>
-      </div>
-      <p>
-        If you're already familiar with LLM prompting and just want to dive in, here's the minimum you need to know:
-      </p>
-
-      <div class="code-and-render">
-        <div class="code-panel">
-          <pre><span class="template">MyPrompt</span>[<span class="context">@T</span>]: {
-    <span class="role">S</span>: <span class="template">INSTRUCTIONS</span>
-    <span class="role">U</span>: <span class="context">env.user_input</span>[<span class="context">@T</span>]
-}</pre>
-        </div>
-        <div class="rendered-output">
-          <div class="render-label">Rendered</div>
-          <div class="prompt-title"><h1>MyPrompt[<span class="idx">@T</span>]:</h1></div>
-          <div class="role-msg system">
-            <span class="role-badge">System</span>
-            <div class="role-body"><span class="tpl">INSTRUCTIONS</span></div>
-          </div>
-          <div class="role-msg user">
-            <span class="role-badge">User</span>
-            <div class="role-body"><span class="ctx">env.user_input[<span class="idx">@T</span>]</span></div>
-          </div>
-        </div>
-      </div>
-
-      <p>
-        That's it! <code>S:</code> is a system message, <code>U:</code> is a user message, and <code>env.user_input[@T]</code>
-        is a variable that holds the user's input at turn <code>@T</code>.
-      </p>
-
-      <a href="visualizer.html" class="try-it">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="5 3 19 12 5 21 5 3"></polygon>
-        </svg>
-        Try it in the Live Editor
-      </a>
-
-      <div class="callout tip">
-        <div class="callout-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-            <path d="M2 17l10 5 10-5"></path>
-            <path d="M2 12l10 5 10-5"></path>
-          </svg>
-          Ready for more?
-        </div>
-        <div class="callout-content">
-          Continue reading below for a complete walkthrough, or jump to the <a href="syntax-reference.html" style="color: #22c55e;">documentation</a> for the full reference.
-        </div>
-      </div>
-    </section>
-
     <!-- Step 1: What is ACDL? -->
     <section id="step1" class="step">
       <div class="step-header">
