@@ -20,7 +20,7 @@
   <style>
     /* Tutorial-specific styles */
     .tutorial-hero {
-      padding: 140px 24px 60px;
+      padding: 140px 24px 32px;
       text-align: center;
       background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 119, 198, 0.15), transparent);
     }
@@ -83,7 +83,7 @@
     .tutorial-content {
       max-width: 800px;
       margin: 0 auto;
-      padding: 60px 24px 100px;
+      padding: 32px 24px 100px;
     }
 
     .step {
@@ -623,12 +623,12 @@
       </div>
       <p>
         <strong>ACDL (Agentic Context Description Language)</strong> is a way to describe the structure of LLM prompts
-        and agent conversations. Think of it as a blueprint for how your AI agent communicates.
+        and agent conversations. Think of it as a blueprint for the context your agent constructs and sends to the LLM.
       </p>
       <p>
         When you build an AI agent, you need to manage complex conversations: system instructions, user messages,
         tool calls, loops through history, conditional logic. ACDL gives you a clean way to describe all of this
-        without mixing it up with implementation details.
+        that is easy to understand and allows you to compare different implementations easily.
       </p>
 
       <div class="explanation">
