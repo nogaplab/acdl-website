@@ -640,7 +640,7 @@
           </svg>
         </div>
         <div class="explanation-text">
-          <strong>Why not just write prompts directly?</strong> You can! But as your agent grows more complex,
+          <strong>Why not just write prompts directly?</strong> As your agent grows more complex,
           ACDL helps you see the structure at a glance, share it with others, and reason about how context
           evolves over time.
         </div>
@@ -654,19 +654,19 @@
         <h2>Your First Prompt</h2>
       </div>
       <p>
-        Let's start with the simplest possible ACDL prompt. Every prompt has a <strong>name</strong> and a <strong>body</strong>:
+        Let's start with the simplest possible ACDL prompt. Every prompt is a series of messages, each marked with a role (System, User, Assistant, Tool) and containing different types of content. Here's what that looks like in ACDL:
       </p>
 
       <div class="code-and-render">
         <div class="code-panel">
-          <pre><span class="template">HelloWorld</span>[]: {
+          <pre><span class="template">HelloWorld</span>[<span class="context">@T</span>]: {
     <span class="role">S</span>: <span class="template">INSTRUCTIONS</span>
     <span class="role">U</span>: <span class="template">CONTENT</span>
 }</pre>
         </div>
         <div class="rendered-output">
           <div class="render-label">Rendered</div>
-          <div class="prompt-title"><h1>HelloWorld[]:</h1></div>
+          <div class="prompt-title"><h1>HelloWorld[<span class="idx">@T</span>]:</h1></div>
           <div class="role-msg system">
             <span class="role-badge">System</span>
             <div class="role-body"><span class="tpl">INSTRUCTIONS</span></div>
