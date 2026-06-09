@@ -2668,6 +2668,31 @@ var ACDL = (() => {
       return blocks;
     }
     /**
+     * Like parseFile() but also records the 1-based start and end line of each
+     * top-level block in the source. Useful for cursor-aware tooling that needs
+     * to map editor positions to AST blocks.
+     */
+    parseFileWithRanges() {
+      const ranges = [];
+      while (!this.isEOF()) {
+        const tok = this.peek();
+        const startLine = tok.line;
+        let block;
+        if (tok.type === "COMMENT") {
+          const text = this.consume("COMMENT").value;
+          block = commentBlock({ text });
+        } else if (tok.type === "KEYWORD" && tok.value === "StrFrag") {
+          block = this.parseStrFragDef();
+        } else if (tok.type === "KEYWORD" && tok.value === "RolesFrag") {
+          block = this.parseRolesFragDef();
+        } else {
+          block = this.parsePrompt();
+        }
+        ranges.push({ block, startLine, endLine: this.lastConsumedLine });
+      }
+      return ranges;
+    }
+    /**
      * Parse a StrFrag definition: StrFrag Name[params]: { RoleBuildingBlock* }
      */
     parseStrFragDef() {
@@ -40556,6 +40581,31 @@ var ACDLEditor = (() => {
         }
       }
       return blocks;
+    }
+    /**
+     * Like parseFile() but also records the 1-based start and end line of each
+     * top-level block in the source. Useful for cursor-aware tooling that needs
+     * to map editor positions to AST blocks.
+     */
+    parseFileWithRanges() {
+      const ranges = [];
+      while (!this.isEOF()) {
+        const tok = this.peek();
+        const startLine = tok.line;
+        let block;
+        if (tok.type === "COMMENT") {
+          const text = this.consume("COMMENT").value;
+          block = commentBlock({ text });
+        } else if (tok.type === "KEYWORD" && tok.value === "StrFrag") {
+          block = this.parseStrFragDef();
+        } else if (tok.type === "KEYWORD" && tok.value === "RolesFrag") {
+          block = this.parseRolesFragDef();
+        } else {
+          block = this.parsePrompt();
+        }
+        ranges.push({ block, startLine, endLine: this.lastConsumedLine });
+      }
+      return ranges;
     }
     /**
      * Parse a StrFrag definition: StrFrag Name[params]: { RoleBuildingBlock* }
