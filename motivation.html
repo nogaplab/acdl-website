@@ -101,17 +101,155 @@
       margin-top: 9px;
     }
 
-    /* Pull-quote: the "precise but isn't" sentence */
-    .imprecise-quote {
-      border-left: 3px solid rgba(120, 119, 198, 0.6);
-      background: rgba(255,255,255,0.03);
-      border-radius: 0 12px 12px 0;
-      padding: 20px 28px;
-      margin: 28px 0;
-      font-size: 1.2rem;
-      line-height: 1.6;
-      font-style: italic;
+    /* Slide-style ambiguity demonstration */
+    .ambiguity-demo {
+      margin: 32px 0;
+    }
+
+    .desc-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 24px 28px 32px;
+    }
+
+    .desc-lead {
+      font-size: 1.15rem;
       color: rgba(255,255,255,0.85);
+      margin: 0 0 8px;
+    }
+
+    .desc-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .desc-list li {
+      position: relative;
+      padding: 8px 0 8px 22px;
+      font-size: 1.08rem;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.82);
+    }
+
+    .desc-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 15px;
+      width: 7px;
+      height: 7px;
+      background: #7877c6;
+      border-radius: 50%;
+    }
+
+    /* Highlighted phrase with arrow underneath */
+    .hl-phrase {
+      position: relative;
+      display: inline-block;
+      border: 2px solid #7877c6;
+      border-radius: 6px;
+      padding: 1px 8px;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    .hl-arrow {
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      transform: translateX(-50%);
+      margin-top: 6px;
+      color: #7877c6;
+      font-size: 1.4rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .ambiguous-label {
+      text-align: center;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #fff;
+      margin: 30px 0;
+    }
+
+    .options-compare {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .option-card {
+      position: relative;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 24px 28px;
+    }
+
+    .option-card ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .option-card li {
+      position: relative;
+      padding: 6px 0 6px 18px;
+      font-size: 1rem;
+      line-height: 1.5;
+      color: rgba(255,255,255,0.82);
+    }
+
+    .option-card li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 13px;
+      width: 6px;
+      height: 6px;
+      background: #7877c6;
+      border-radius: 50%;
+    }
+
+    .option-card li ul {
+      margin-top: 2px;
+    }
+
+    .option-card li ul li {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .option-card li ul li::before {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.45);
+    }
+
+    .option-badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #7877c6;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .neq {
+      font-size: 2.25rem;
+      font-weight: 400;
+      color: rgba(255,255,255,0.45);
+      text-align: center;
     }
 
     /* Principles in the ACDL section */
@@ -335,6 +473,8 @@
 
     @media (max-width: 700px) {
       .comparison-grid { grid-template-columns: 1fr; }
+      .options-compare { grid-template-columns: 1fr; }
+      .neq { transform: rotate(90deg); }
       .motivation-hero h1 { font-size: 2rem; }
     }
   </style>
@@ -389,30 +529,51 @@
 
     <div class="motivation-section">
       <h2>A description that sounds precise but isn't</h2>
-      <p>Here is a sentence you might find in a paper or a design doc:</p>
+      <p>Here is a sentence you might find in a paper or a design doc, written the way these things usually are:</p>
 
-      <blockquote class="imprecise-quote">
-        At the start of each turn the agent receives a description of the task, its available tools, and the
-        history of the ReAct loop.
-      </blockquote>
+      <div class="ambiguity-demo">
+        <div class="desc-box">
+          <p class="desc-lead"><em>In each turn:</em></p>
+          <ul class="desc-list">
+            <li>The agent gets a description of the task, its tools and some examples.</li>
+            <li>For each of its previous turns, it gets the <span class="hl-phrase">history of the ReAct loop<span class="hl-arrow" aria-hidden="true">&uarr;</span></span></li>
+          </ul>
+        </div>
+
+        <p class="ambiguous-label">This description is ambiguous</p>
+
+        <div class="options-compare">
+          <div class="option-card">
+            <span class="option-badge">1</span>
+            <ul>
+              <li>No reasoning traces</li>
+              <li>Tool calls, responses:
+                <ul>
+                  <li>Sent in separate messages</li>
+                  <li>With different roles</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+          <div class="neq" aria-hidden="true">&ne;</div>
+          <div class="option-card">
+            <span class="option-badge">2</span>
+            <ul>
+              <li>Includes reasoning traces</li>
+              <li>Tool calls, responses (&amp; reasoning):
+                <ul>
+                  <li>Sent in one message</li>
+                  <li>Assistant role</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
 
       <p>
-        This reads like a complete specification. It is not. The phrase &ldquo;the history of the ReAct loop&rdquo;
-        hides a set of independent choices, each of which changes what the model actually sees:
-      </p>
-
-      <ul>
-        <li>Are the model's reasoning traces kept in the history, or dropped once an action has been taken?</li>
-        <li>Is each tool call bundled with its response in a single message, or split across separate messages?</li>
-        <li>What role carries a tool response: assistant, user, or a dedicated tool role?</li>
-      </ul>
-
-      <p>
-        Two readings illustrate the gap. In <strong>Option 1</strong>, reasoning traces are dropped, and each tool
-        call and its response are sent as separate messages with different roles. In <strong>Option 2</strong>,
-        reasoning traces are kept, and each call and its response are bundled into a single assistant message. Both
-        honor the sentence above. They produce different contexts, and from the text alone you cannot tell which one
-        the author meant.
+        Both readings honor the sentence above, yet they produce different contexts&mdash;and from the text alone you
+        cannot tell which one the author meant. In ACDL, each reading is written out explicitly:
       </p>
 
       <figure class="comparison-figure">
