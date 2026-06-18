@@ -81,7 +81,7 @@
 
     /* Main content */
     .tutorial-content {
-      max-width: 800px;
+      max-width: 1100px;
       margin: 0 auto;
       padding: 32px 24px 100px;
     }
@@ -638,14 +638,14 @@
       </p>
     </section>
 
-    <!-- Step 2: Your First Prompt -->
+    <!-- Step 2: Your First ACDL Description -->
     <section id="step2" class="step">
       <div class="step-header">
         <div class="step-number">2</div>
-        <h2>Your First Prompt</h2>
+        <h2>Your First ACDL Description</h2>
       </div>
       <p>
-        Let's start with the simplest possible ACDL prompt. Every prompt is a series of messages, each marked with a role (System, User, Assistant, Tool) and containing different types of content. Here's what that looks like in ACDL:
+        Let's start with the simplest possible ACDL context. Every context is a series of messages, each marked with a role (System, User, Assistant, Tool) and containing different types of content. Here's what that looks like in ACDL:
       </p>
 
       <div class="code-and-render">
@@ -670,7 +670,7 @@
       </div>
 
       <p>
-        This describes an llm context with two messages. The first message is a message who's role is <strong>System</strong> and whose content is the template <code>INSTRUCTIONS</code>. The second message is a message who's role is <strong>User</strong> and whose content is the template <code>CONTENT</code>.
+        This describes an llm context with two messages. The first message is a message who's role is <strong>System</strong> (<strong>S:</strong>)which has a single piece of content: the template <code>INSTRUCTIONS</code>. The second message is a message who's role is <strong>User</strong> (<strong>U:</strong>) and whose content is the template <code>CONTENT</code>. Like every ACDL description, this shows 
       </p>
 
       <div class="explanation">
@@ -694,7 +694,7 @@
             <line x1="12" y1="16" x2="12" y2="12"></line>
             <line x1="12" y1="8" x2="12.01" y2="8"></line>
           </svg>
-          The Five Roles
+          The Roles
         </div>
         <div class="callout-content">
           ACDL has four chat role markers: <code>S:</code> (System), <code>U:</code> (User), <code>A:</code> (Assistant),

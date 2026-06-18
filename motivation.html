@@ -25,10 +25,13 @@
     }
 
     .motivation-hero h1 {
-      font-size: 3rem;
+      font-size: 2.75rem;
       font-weight: 700;
       letter-spacing: -0.03em;
       margin-bottom: 16px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
       background: linear-gradient(to bottom right, #fff 30%, rgba(255,255,255,0.4));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -38,8 +41,9 @@
     .motivation-hero p {
       font-size: 1.25rem;
       color: rgba(255,255,255,0.5);
-      max-width: 650px;
+      max-width: 680px;
       margin: 0 auto;
+      line-height: 1.6;
     }
 
     .motivation-content {
@@ -56,6 +60,7 @@
       font-size: 1.75rem;
       font-weight: 600;
       color: #fff;
+      letter-spacing: -0.02em;
       margin-bottom: 20px;
     }
 
@@ -64,6 +69,10 @@
       line-height: 1.8;
       color: rgba(255,255,255,0.7);
       margin-bottom: 20px;
+    }
+
+    .motivation-section p strong {
+      color: rgba(255,255,255,0.9);
     }
 
     .motivation-section ul {
@@ -78,6 +87,7 @@
       gap: 12px;
       padding: 12px 0;
       font-size: 1.05rem;
+      line-height: 1.6;
       color: rgba(255,255,255,0.7);
     }
 
@@ -88,21 +98,218 @@
       min-width: 8px;
       background: #7877c6;
       border-radius: 50%;
-      margin-top: 10px;
+      margin-top: 9px;
     }
 
-    .highlight-box {
-      background: rgba(120, 119, 198, 0.1);
-      border: 1px solid rgba(120, 119, 198, 0.3);
-      border-radius: 12px;
-      padding: 24px 28px;
-      margin: 32px 0;
-    }
-
-    .highlight-box p {
-      margin: 0;
-      font-size: 1.1rem;
+    /* Pull-quote: the "precise but isn't" sentence */
+    .imprecise-quote {
+      border-left: 3px solid rgba(120, 119, 198, 0.6);
+      background: rgba(255,255,255,0.03);
+      border-radius: 0 12px 12px 0;
+      padding: 20px 28px;
+      margin: 28px 0;
+      font-size: 1.2rem;
+      line-height: 1.6;
+      font-style: italic;
       color: rgba(255,255,255,0.85);
+    }
+
+    /* Principles in the ACDL section */
+    .principles {
+      list-style: none;
+      padding: 0;
+      margin: 24px 0 0;
+    }
+
+    .principles li {
+      display: block;
+      padding: 16px 0;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 1.08rem;
+      line-height: 1.75;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .principles li::before { content: none; }
+
+    .principles li strong {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* Comparison figure (breaks out wider than the text column) */
+    .comparison-figure {
+      width: min(1040px, 92vw);
+      position: relative;
+      left: 50%;
+      transform: translateX(-50%);
+      margin: 40px 0;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .comparison-col {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .comparison-col-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .comparison-col-header h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 0 0 4px;
+    }
+
+    .comparison-col-header p {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.45);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    figcaption {
+      text-align: center;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.4);
+      margin-top: 18px;
+      line-height: 1.6;
+    }
+
+    /* --- Rendered ACDL output (shared look with the tutorial page) --- */
+    .rendered-output {
+      background: #fff;
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      line-height: 1.3;
+    }
+
+    .rendered-output .prompt-title {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 3px;
+      padding: 4px 10px;
+      margin-bottom: 8px;
+    }
+
+    .rendered-output .prompt-title h1 {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: #0a0a0a;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .rendered-output .role-msg {
+      border-left: 2px solid #d0d7de;
+      margin: 5px 0;
+      padding: 0;
+    }
+    .rendered-output .role-msg.system { border-left-color: #0969da; }
+    .rendered-output .role-msg.user { border-left-color: #e5990b; }
+    .rendered-output .role-msg.assistant { border-left-color: #1acad1; }
+    .rendered-output .role-msg.tool { border-left-color: #f7660b; }
+
+    .rendered-output .role-badge {
+      display: block;
+      width: fit-content;
+      padding: 2px 5px;
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      border-radius: 0 0 3px 0;
+      color: #fff;
+      line-height: 1;
+    }
+    .rendered-output .role-msg.system .role-badge { background: #0969da; }
+    .rendered-output .role-msg.user .role-badge { background: #e5990b; }
+    .rendered-output .role-msg.assistant .role-badge { background: #1acad1; }
+    .rendered-output .role-msg.tool .role-badge { background: #f7660b; }
+
+    .rendered-output .role-body {
+      padding: 4px 8px;
+    }
+
+    .rendered-output .tpl {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #faf5ff;
+      border: 1px solid #9333ea;
+      color: #9333ea;
+      padding: 3px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 500;
+      line-height: 1;
+      margin: 1px 0;
+    }
+    .rendered-output .tpl::before {
+      content: '\25C6';
+      font-size: 8px;
+      opacity: 0.7;
+    }
+
+    .rendered-output .ctx {
+      display: inline-flex;
+      align-items: center;
+      background: #e0ffdd;
+      border: 1px solid #0da66b;
+      color: #0da66b;
+      padding: 3px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 500;
+      margin: 1px 0;
+    }
+
+    .rendered-output .idx {
+      color: #0969da;
+      font-weight: 700;
+    }
+
+    .rendered-output .ctrl-block {
+      border-left: 2px solid #6e7781;
+      margin: 6px 0;
+      padding: 4px 8px 4px 10px;
+    }
+
+    .rendered-output .ctrl-header {
+      padding: 3px 6px;
+      margin: -4px -8px 4px -10px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #57606a;
+      background: #eaeef2;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .rendered-output .ctrl-header::before {
+      content: '\21BB';
+      font-size: 9px;
+      color: #6e7781;
+    }
+
+    .rendered-output .cmt {
+      color: #6e7781;
+      font-style: italic;
+      font-size: 9px;
+      display: block;
+      margin: 3px 0;
     }
 
     .cta-section {
@@ -124,6 +331,11 @@
       gap: 16px;
       justify-content: center;
       flex-wrap: wrap;
+    }
+
+    @media (max-width: 700px) {
+      .comparison-grid { grid-template-columns: 1fr; }
+      .motivation-hero h1 { font-size: 2rem; }
     }
   </style>
 </head>
@@ -159,43 +371,193 @@
 </nav>
 
   <section class="motivation-hero">
-    <h1>Why ACDL?</h1>
-    <p>Understanding the need for a formal language to describe LLM context structures</p>
+    <h1>Describing the Contexts of Agentic LLM Systems</h1>
+    <p>The structure of an agent's context is one of its most consequential design decisions&mdash;and one of the hardest to communicate.</p>
   </section>
 
   <div class="motivation-content">
     <div class="motivation-section">
-      <h2>The Power of Shared Languages</h2>
       <p>
-        Clear communication of design choices is essential for reproducible engineering. From UML diagrams
-        to neural network box diagrams (ResNet, Transformer), formal languages have become indispensable
-        tools as they enable communication and make structure visible and comparable at a glance.
+        An LLM agent works by making a sequence of calls to a language model. Before each call, the surrounding
+        system assembles a context out of instructions, observations, accumulated history, and tool results, and
+        sends it to the model. The model's response drives the next action, the state updates, and the loop
+        continues. The structure of that context&mdash;which pieces appear, in what order, under which roles, and how
+        all of it changes from one step to the next&mdash;is one of the most consequential design decisions in an
+        agent. It is also one of the hardest things to communicate.
       </p>
     </div>
 
     <div class="motivation-section">
-      <h2>The Gap in LLM Systems</h2>
+      <h2>A description that sounds precise but isn't</h2>
+      <p>Here is a sentence you might find in a paper or a design doc:</p>
+
+      <blockquote class="imprecise-quote">
+        At the start of each turn the agent receives a description of the task, its available tools, and the
+        history of the ReAct loop.
+      </blockquote>
+
       <p>
-        Despite the rapid growth of agentic LLM systems, there is no standard way to describe how the input
-        to a language model is assembled and how it evolves across interaction steps. Descriptions are
-        scattered across code, documentation, and ad-hoc diagrams that fail to capture the full structure.
+        This reads like a complete specification. It is not. The phrase &ldquo;the history of the ReAct loop&rdquo;
+        hides a set of independent choices, each of which changes what the model actually sees:
       </p>
-      <div class="highlight-box">
-        <p>
-          Even small variations in context assembly—such as whether to include reasoning steps in history—lead
-          to measurable differences in agent performance. These are precisely the distinctions a ACDL makes explicit.
-        </p>
-      </div>
+
+      <ul>
+        <li>Are the model's reasoning traces kept in the history, or dropped once an action has been taken?</li>
+        <li>Is each tool call bundled with its response in a single message, or split across separate messages?</li>
+        <li>What role carries a tool response: assistant, user, or a dedicated tool role?</li>
+      </ul>
+
+      <p>
+        Two readings illustrate the gap. In <strong>Option 1</strong>, reasoning traces are dropped, and each tool
+        call and its response are sent as separate messages with different roles. In <strong>Option 2</strong>,
+        reasoning traces are kept, and each call and its response are bundled into a single assistant message. Both
+        honor the sentence above. They produce different contexts, and from the text alone you cannot tell which one
+        the author meant.
+      </p>
+
+      <figure class="comparison-figure">
+        <div class="comparison-grid">
+          <!-- Option 1 -->
+          <div class="comparison-col">
+            <div class="comparison-col-header">
+              <h4>Option 1</h4>
+              <p>Reasoning dropped &middot; call and response as separate messages</p>
+            </div>
+            <div class="rendered-output">
+              <div class="prompt-title"><h1>Option1[<span class="idx">@T.I</span>]:</h1></div>
+              <div class="role-msg system">
+                <span class="role-badge">System</span>
+                <div class="role-body">
+                  <span class="tpl">TASK_DESCRIPTION</span><br>
+                  <span class="ctx">env.tool_descriptions</span><br>
+                  <span class="ctx">env.in_context_examples</span>
+                </div>
+              </div>
+              <span class="cmt">// previous turns</span>
+              <div class="ctrl-block">
+                <div class="ctrl-header">ForEach <span class="idx">@t</span> : 1 ... <span class="idx">@T</span></div>
+                <div class="ctrl-block">
+                  <div class="ctrl-header">ForEach <span class="idx">i</span> : 1 ... <span class="idx">@t.substeps</span></div>
+                  <div class="role-msg assistant">
+                    <span class="role-badge">Assistant</span>
+                    <div class="role-body"><span class="ctx">sys.tool_used[<span class="idx">@t.i</span>]</span></div>
+                  </div>
+                  <div class="role-msg tool">
+                    <span class="role-badge">Tool</span>
+                    <div class="role-body"><span class="ctx">sys.tool_used[<span class="idx">@t.i</span>].tool_response</span></div>
+                  </div>
+                </div>
+              </div>
+              <span class="cmt">// current turn</span>
+              <div class="ctrl-block">
+                <div class="ctrl-header">ForEach <span class="idx">i</span> : 1 ... <span class="idx">I</span></div>
+                <div class="role-msg assistant">
+                  <span class="role-badge">Assistant</span>
+                  <div class="role-body"><span class="ctx">sys.tool_used[<span class="idx">@T.i</span>]</span></div>
+                </div>
+                <div class="role-msg tool">
+                  <span class="role-badge">Tool</span>
+                  <div class="role-body"><span class="ctx">sys.tool_used[<span class="idx">@T.i</span>].tool_response</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Option 2 -->
+          <div class="comparison-col">
+            <div class="comparison-col-header">
+              <h4>Option 2</h4>
+              <p>Reasoning kept &middot; call and response bundled into one assistant message</p>
+            </div>
+            <div class="rendered-output">
+              <div class="prompt-title"><h1>Option2[<span class="idx">@T.I</span>]:</h1></div>
+              <div class="role-msg system">
+                <span class="role-badge">System</span>
+                <div class="role-body">
+                  <span class="tpl">TASK_DESCRIPTION</span><br>
+                  <span class="ctx">env.tool_descriptions</span><br>
+                  <span class="ctx">env.in_context_examples</span>
+                </div>
+              </div>
+              <div class="role-msg assistant">
+                <span class="role-badge">Assistant</span>
+                <div class="role-body">
+                  <span class="cmt">// previous turns</span>
+                  <div class="ctrl-block">
+                    <div class="ctrl-header">ForEach <span class="idx">@t</span> : 1 ... <span class="idx">@T</span></div>
+                    <div class="ctrl-block">
+                      <div class="ctrl-header">ForEach <span class="idx">i</span> : 1 ... <span class="idx">@t.substeps</span></div>
+                      <span class="ctx">resp.tool_reasoning[<span class="idx">@t.i</span>]</span><br>
+                      <span class="ctx">sys.tool_used[<span class="idx">@t.i</span>]</span><br>
+                      <span class="ctx">sys.tool_used[<span class="idx">@t.i</span>].tool_response</span>
+                    </div>
+                  </div>
+                  <span class="cmt">// current turn</span>
+                  <div class="ctrl-block">
+                    <div class="ctrl-header">ForEach <span class="idx">i</span> : 1 ... <span class="idx">I</span></div>
+                    <span class="ctx">resp.tool_reasoning[<span class="idx">@T.i</span>]</span><br>
+                    <span class="ctx">sys.tool_used[<span class="idx">@T.i</span>]</span><br>
+                    <span class="ctx">sys.tool_used[<span class="idx">@T.i</span>].tool_response</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>
+          Two context structures that both satisfy the same prose description, rendered side by side.
+        </figcaption>
+      </figure>
     </div>
 
     <div class="motivation-section">
-      <h2>What Makes ACDL Different</h2>
+      <h2>Why this matters</h2>
       <p>
-        Existing languages for LLM systems focus on structuring individual prompts or orchestrating workflows—they're
-        about <em>execution</em>. ACDL is different: it's a <strong>descriptive language</strong> for specifying
-        how context is composed across multi-turn interactions, how it changes over time, and where its components
-        originate. By providing a formal vocabulary for context structures, ACDL enables precise documentation,
-        clear communication, and direct comparison of different context management strategies.
+        Today the options for describing context structure are prose, ad hoc diagrams, or the implementation code
+        itself. Prose and diagrams are quick to produce but ambiguous, as the example above shows. Code is exact,
+        but recovering the structure from it means reading all of it, which is arduous and rarely how anyone wants
+        to communicate a design.
+      </p>
+      <p>
+        The consequences compound. Published systems are difficult to reproduce, because the logic that assembles
+        the context is left to interpretation. Systems that look similar at a high level are difficult to compare,
+        because the structural choices that actually distinguish them are not visible. And within a team, there is
+        no shared vocabulary to discuss how a context is built, reason about a proposed change, or carry a design
+        from a whiteboard into code without loss.
+      </p>
+    </div>
+
+    <div class="motivation-section">
+      <h2>ACDL</h2>
+      <p>
+        ACDL, the <strong>Agentic Context Description Language</strong>, addresses this gap. It describes the
+        structure of the context sent to the model at each step, and how that structure evolves across the
+        interaction. A few principles shape it.
+      </p>
+      <ul class="principles">
+        <li>
+          <strong>It is descriptive, not procedural.</strong> ACDL specifies what the context contains, not how to
+          compute it. It is not a programming language, and it is not meant to be executed or to emit prompts.
+        </li>
+        <li>
+          <strong>It captures structure, not wording.</strong> ACDL abstracts away the exact strings, which are the
+          concern of prompt engineering, and instead captures the architecture: which role messages appear, what
+          information pieces each one holds, and where each piece comes from&mdash;whether a constant, the system's
+          own state, the environment, or a previous model response.
+        </li>
+        <li>
+          <strong>It is built for change over time.</strong> Time indices and control flow, including loops and
+          conditions, capture how history accumulates and how the context is reassembled at each step rather than
+          describing a single static prompt.
+        </li>
+        <li>
+          <strong>It can be written or drawn.</strong> A specification can be rendered to a diagram automatically,
+          and the same notation is simple enough to sketch by hand on a whiteboard.
+        </li>
+      </ul>
+      <p style="margin-top: 24px;">
+        The language is built from a small set of constructs that are quick to learn, and that small vocabulary is
+        enough to describe a surprising range of real designs.
       </p>
     </div>
 
