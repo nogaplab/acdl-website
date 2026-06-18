@@ -691,40 +691,6 @@
       </p>
     </div>
 
-    <div class="motivation-section">
-      <h2>ACDL</h2>
-      <p>
-        ACDL, the <strong>Agentic Context Description Language</strong>, addresses this gap. It describes the
-        structure of the context sent to the model at each step, and how that structure evolves across the
-        interaction. A few principles shape it.
-      </p>
-      <ul class="principles">
-        <li>
-          <strong>It is descriptive, not procedural.</strong> ACDL specifies what the context contains, not how to
-          compute it. It is not a programming language, and it is not meant to be executed or to emit prompts.
-        </li>
-        <li>
-          <strong>It captures structure, not wording.</strong> ACDL abstracts away the exact strings, which are the
-          concern of prompt engineering, and instead captures the architecture: which role messages appear, what
-          information pieces each one holds, and where each piece comes from&mdash;whether a constant, the system's
-          own state, the environment, or a previous model response.
-        </li>
-        <li>
-          <strong>It is built for change over time.</strong> Time indices and control flow, including loops and
-          conditions, capture how history accumulates and how the context is reassembled at each step rather than
-          describing a single static prompt.
-        </li>
-        <li>
-          <strong>It can be written or drawn.</strong> A specification can be rendered to a diagram automatically,
-          and the same notation is simple enough to sketch by hand on a whiteboard.
-        </li>
-      </ul>
-      <p style="margin-top: 24px;">
-        The language is built from a small set of constructs that are quick to learn, and that small vocabulary is
-        enough to describe a surprising range of real designs.
-      </p>
-    </div>
-
     <div class="cta-section">
       <h3>Ready to learn ACDL?</h3>
       <div class="cta-buttons">
