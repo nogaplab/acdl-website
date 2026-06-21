@@ -888,7 +888,7 @@ describe which turn we're talking about:</p>
     <div class="step-number">6</div>
     <h2>Loops: Including Conversation History</h2>
   </div>
-<p>Most agents need to include previous conversation turns. Use <code>ForEach</code> to loop through history:</p>
+<p>Instead of writing out each of the turns, if there is a recurring pattern of what you include in the history, use <code>ForEach</code> to loop through it:</p>
 <div class="code-and-render">
   <div class="code-panel">
     <pre><span class="template">ChatWithHistory</span>[<span class="context">@T</span>]: {
