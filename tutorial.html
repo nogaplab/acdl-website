@@ -657,7 +657,7 @@ As your agent grows more complex, ACDL helps you see the structure at a glance, 
     </div>
   </div>
 </div>
-<p>This describes an llm context with two messages. The first message is a message who's role is <strong>System</strong> (<strong>S:</strong>)which has a single piece of content: the template <code>INSTRUCTIONS</code>. The second message is a message who's role is <strong>User</strong> (<strong>U:</strong>) and whose content is the template <code>CONTENT</code>. Like every ACDL description, the @T signifies that this is the context sent at turn T of the conversation.</p>
+<p>This describes an llm context with two messages. The first message is a message who's role is <strong>System</strong> (<strong>S:</strong>) which has a single piece of content: the template <code>INSTRUCTIONS</code>. The second message is a message who's role is <strong>User</strong> (<strong>U:</strong>) and whose content is the template <code>CONTENT</code>. Like every ACDL description, the @T signifies that this is the context sent at turn T of the conversation.</p>
 <div class="explanation">
   <div class="explanation-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg></div>
   <div class="explanation-text">
@@ -722,6 +722,32 @@ three sources:</p>
   <li><code>sys.</code> - Agent state (memory contents, tool configurations, action histories)</li>
   <li><code>resp.</code> - LLM responses (what the model previously generated)</li>
 </ul>
+<div class="explanation">
+  <div class="explanation-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></div>
+  <div class="explanation-text">
+<p>strings like <code>env.user_input</code> represent information that is tracked by the system or comes from the external world. The existence of a value like <code>env.user_input</code> in the context description assumes that your agent has a way to track this information.</p>
+  </div>
+</div>
+<div class="code-and-render">
+  <div class="code-panel">
+    <pre><span class="template">AssistantPrompt</span>: {
+    <span class="role">S</span>: <span class="template">ROLE_DESCRIPTION</span>(<span class="context">env.assistant_name</span>)
+    <span class="role">U</span>: <span class="context">env.user_input</span>
+}</pre>
+  </div>
+  <div class="rendered-output">
+    <div class="render-label">Rendered</div>
+    <div class="prompt-title"><h1>AssistantPrompt:</h1></div>
+    <div class="role-msg system">
+      <span class="role-badge">System</span>
+      <div class="role-body"><span class="tpl">ROLE_DESCRIPTION(<span class="ctx">env.assistant_name</span>)</span></div>
+    </div>
+    <div class="role-msg user">
+      <span class="role-badge">User</span>
+      <div class="role-body"><span class="ctx">env.user_input</span></div>
+    </div>
+  </div>
+</div>
 <div class="callout note">
   <div class="callout-title">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
@@ -731,22 +757,6 @@ three sources:</p>
 <p>All values in ACDL are immutable. A value like <code>sys.config.role</code> stays the same throughout
 the system's lifetime. Values that change between steps are accessed with a time index:
 <code>env.user_input[@T]</code> is the user input at the current step.</p>
-  </div>
-</div>
-<div class="code-example">
-  <div class="code-example-header">
-    <span class="code-example-title">with-variables.acdl</span>
-  </div>
-  <pre><span class="template">AssistantPrompt</span>: {
-    <span class="role">S</span>: <span class="template">ROLE_DESCRIPTION</span>(<span class="context">env.assistant_name</span>)
-    <span class="role">U</span>: <span class="context">env.user_input</span>
-}</pre>
-</div>
-<div class="explanation">
-  <div class="explanation-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></div>
-  <div class="explanation-text">
-<p>Variables like <code>env.user_input</code> are placeholders. When you implement your agent, you'll fill
-these in with actual values. ACDL doesn't care about the implementation - it just describes the structure.</p>
   </div>
 </div>
 </section>
