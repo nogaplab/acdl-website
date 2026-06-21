@@ -787,8 +787,7 @@ describe which turn we're talking about:</p>
     </div>
   </div>
 </div>
-<p>The <code>[@T]</code> after the prompt name means &quot;this prompt is parameterized by turn <code>T</code>&quot;.
-Inside the prompt, <code>env.user_input[@T]</code> means &quot;the user's input at turn T&quot;.</p>
+<p>This specification shows a coding agent that recieves 2 messages. The first message's content is a <code>Role</code> Template that is dependent on the assistant's name (similar to the how you have parameters for <code>printf</code> in Python). The second message is the user's input at turn T. We use the <code>env</code> prefix here to signify that this value originated in the environment. The <code>[@T]</code> after the prompt name means &quot;this prompt is parameterized by turn <code>T</code>&quot;.</p>
 <ul class="feature-list">
   <li><code>@T</code> - The current turn (a parameter)</li>
   <li><code>@1</code>, <code>@2</code>, etc. - Specific turn numbers</li>
