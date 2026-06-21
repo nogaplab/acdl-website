@@ -387,7 +387,7 @@
     .code-and-render .code-panel pre {
       margin: 0;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
+      font-size: 15px;
       line-height: 1.7;
       color: rgba(255,255,255,0.85);
       background: transparent;
@@ -730,14 +730,14 @@ three sources:</p>
 </div>
 <div class="code-and-render">
   <div class="code-panel">
-    <pre><span class="template">AssistantPrompt</span>: {
+    <pre><span class="template">Assistant</span>: {
     <span class="role">S</span>: <span class="template">ROLE_DESCRIPTION</span>(<span class="context">env.assistant_name</span>)
     <span class="role">U</span>: <span class="context">env.user_input</span>
 }</pre>
   </div>
   <div class="rendered-output">
     <div class="render-label">Rendered</div>
-    <div class="prompt-title"><h1>AssistantPrompt:</h1></div>
+    <div class="prompt-title"><h1>Assistant:</h1></div>
     <div class="role-msg system">
       <span class="role-badge">System</span>
       <div class="role-body"><span class="tpl">ROLE_DESCRIPTION(<span class="ctx">env.assistant_name</span>)</span></div>
@@ -748,6 +748,7 @@ three sources:</p>
     </div>
   </div>
 </div>
+<p>This specification shows an assistent agent that recieves 2 messages. The first message's content is a Role Template that is dependent on the assistant's name (similar to the how you have parameters for printf in Python). The second message is the user's input at turn T. We use the env prefix here to signify that this value originated in the environment. The [@T] after the prompt name means &quot;this prompt is parameterized by turn T&quot;.</p>
 <div class="callout note">
   <div class="callout-title">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
