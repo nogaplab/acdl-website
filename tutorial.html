@@ -998,18 +998,73 @@ in a loop:</p>
   </div>
 </div>
 <p>This describes the classic ReAct pattern. The first message is a System message holding two templates, <code>TASK_INSTRUCTIONS</code> and <code>AVAILABLE_TOOLS</code>. The second is a User message with the question to answer. After that come the steps of the ReAct loop—two messages per step: an Assistant message with the LLM's reasoning and the tool it chose to call, followed by a Tool message with that tool's response. Once every step up to the current one has been included, we close with a final System message that asks the LLM to either continue the loop or reply to the user.</p>
-<ul class="feature-list">
-  <li>System message with instructions and available tools</li>
-  <li>User's original question</li>
-  <li>Loop through all previous reasoning steps and tool responses</li>
-  <li>Final prompt asking the agent to continue or give an answer</li>
-</ul>
 <a href="visualizer.html?example=react" class="try-it">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <polygon points="5 3 19 12 5 21 5 3"></polygon>
   </svg>
   See this in the Live Editor
 </a>
+<p>Notice that this agent handles a single turn (the user's question) but takes multiple steps within it (the ReAct loop). We could also describe an agent that answers a series of questions, one after another, running a ReAct loop for each one. Here is an example description of such an agent:</p>
+<div class="code-and-render">
+  <div class="code-panel">
+    <pre><span class="template">MultiTurnReactAgent</span>[<span class="context">@T</span>]: {
+    <span class="role">S</span>: {
+        <span class="template">TASK_DESCRIPTION</span>
+        <span class="context">env.tool_descriptions</span> <span class="comment">// description of each tool, how to use them, and when to use them</span>
+    }
+    <span class="comment">// previous turns</span>
+    <span class="keyword">ForEach</span>(<span class="context">@t</span>: range(1, <span class="context">@T</span>)) {
+        <span class="keyword">ForEach</span>(<span class="context">i</span>: range(1, <span class="context">@t.substeps</span>)) {
+            <span class="role">A</span>: <span class="context">sys.tool_used</span>[<span class="context">@t.i</span>]
+            <span class="role">T</span>: <span class="context">sys.tool_used</span>[<span class="context">@t.i</span>].tool_response
+        }
+    }
+    <span class="comment">// current turn</span>
+    <span class="keyword">ForEach</span>(<span class="context">i</span>: range(1, <span class="context">I</span>)) {
+        <span class="role">A</span>: <span class="context">sys.tool_used</span>[<span class="context">@T.i</span>]
+        <span class="role">T</span>: <span class="context">sys.tool_used</span>[<span class="context">@T.i</span>].tool_response
+    }
+}</pre>
+  </div>
+  <div class="rendered-output">
+    <div class="render-label">Rendered</div>
+    <div class="prompt-title"><h1>MultiTurnReactAgent[<span class="idx">@T</span>]:</h1></div>
+    <div class="role-msg system">
+      <span class="role-badge">System</span>
+      <div class="role-body">
+        <span class="tpl">TASK_DESCRIPTION</span><br>
+        <span class="ctx">env.tool_descriptions</span> <span class="cmt">// description of each tool, how to use them, and when to use them</span>
+      </div>
+    </div>
+    <span class="cmt">// previous turns</span>
+    <div class="ctrl-block">
+      <div class="ctrl-header">ForEach <span class="idx">@t</span> : 1 ... <span class="idx">@T</span></div>
+      <div class="ctrl-block">
+        <div class="ctrl-header">ForEach <span class="idx">i</span> : 1 ... <span class="idx">@t.substeps</span></div>
+        <div class="role-msg assistant">
+          <span class="role-badge">Assistant</span>
+          <div class="role-body"><span class="ctx">sys.tool_used[<span class="idx">@t.i</span>]</span></div>
+        </div>
+        <div class="role-msg tool">
+          <span class="role-badge">Tool</span>
+          <div class="role-body"><span class="ctx">sys.tool_used[<span class="idx">@t.i</span>].tool_response</span></div>
+        </div>
+      </div>
+    </div>
+    <span class="cmt">// current turn</span>
+    <div class="ctrl-block">
+      <div class="ctrl-header">ForEach <span class="idx">i</span> : 1 ... <span class="idx">I</span></div>
+      <div class="role-msg assistant">
+        <span class="role-badge">Assistant</span>
+        <div class="role-body"><span class="ctx">sys.tool_used[<span class="idx">@T.i</span>]</span></div>
+      </div>
+      <div class="role-msg tool">
+        <span class="role-badge">Tool</span>
+        <div class="role-body"><span class="ctx">sys.tool_used[<span class="idx">@T.i</span>].tool_response</span></div>
+      </div>
+    </div>
+  </div>
+</div>
 </section>
 <section id="step8" class="step">
   <div class="step-header">
