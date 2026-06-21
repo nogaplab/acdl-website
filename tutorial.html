@@ -787,12 +787,48 @@ describe which turn we're talking about:</p>
     </div>
   </div>
 </div>
-<p>This specification shows a coding agent that recieves 2 messages. The first message's content is a <code>Role</code> Template that is dependent on the assistant's name (similar to the how you have parameters for <code>printf</code> in Python). The second message is the user's input at turn T. We use the <code>env</code> prefix here to signify that this value originated in the environment. The <code>[@T]</code> after the prompt name means &quot;this prompt is parameterized by turn <code>T</code>&quot;.</p>
+<p>This specification shows a coding agent that recieves 2 messages. The first message is a <code>Role</code> template, and the second message is the user's input at turn T. The <code>[@T]</code> after the prompt name means &quot;this prompt is parameterized by turn <code>T</code>&quot;. Notice here that we do not include any of the history. For that, we would use <code>@T-1</code>, <code>@T-k</code> etc.</p>
 <ul class="feature-list">
   <li><code>@T</code> - The current turn (a parameter)</li>
   <li><code>@1</code>, <code>@2</code>, etc. - Specific turn numbers</li>
   <li><code>@t</code> - A loop variable (lowercase) for iterating through turns</li>
 </ul>
+<p>Below is an example of a chat agent that also gets the user's input from the 3 previous turns.</p>
+<div class="code-and-render">
+  <div class="code-panel">
+    <pre><span class="template">ChatAgent</span>[<span class="context">@T</span>]: {
+    <span class="role">S</span>: <span class="template">ROLE</span>
+    <span class="role">U</span>: <span class="context">env.user_input</span>[<span class="context">@T-3</span>]
+    <span class="role">U</span>: <span class="context">env.user_input</span>[<span class="context">@T-2</span>]
+    <span class="role">U</span>: <span class="context">env.user_input</span>[<span class="context">@T-1</span>]
+    <span class="role">U</span>: <span class="context">env.user_input</span>[<span class="context">@T</span>]
+}</pre>
+  </div>
+  <div class="rendered-output">
+    <div class="render-label">Rendered</div>
+    <div class="prompt-title"><h1>ChatAgent[<span class="idx">@T</span>]:</h1></div>
+    <div class="role-msg system">
+      <span class="role-badge">System</span>
+      <div class="role-body"><span class="tpl">ROLE</span></div>
+    </div>
+    <div class="role-msg user">
+      <span class="role-badge">User</span>
+      <div class="role-body"><span class="ctx">env.user_input[<span class="idx">@T-3</span>]</span></div>
+    </div>
+    <div class="role-msg user">
+      <span class="role-badge">User</span>
+      <div class="role-body"><span class="ctx">env.user_input[<span class="idx">@T-2</span>]</span></div>
+    </div>
+    <div class="role-msg user">
+      <span class="role-badge">User</span>
+      <div class="role-body"><span class="ctx">env.user_input[<span class="idx">@T-1</span>]</span></div>
+    </div>
+    <div class="role-msg user">
+      <span class="role-badge">User</span>
+      <div class="role-body"><span class="ctx">env.user_input[<span class="idx">@T</span>]</span></div>
+    </div>
+  </div>
+</div>
 </section>
 <section id="step6" class="step">
   <div class="step-header">
