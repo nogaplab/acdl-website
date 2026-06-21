@@ -997,7 +997,7 @@ in a loop:</p>
     </div>
   </div>
 </div>
-<p>This describes the classic ReAct pattern:</p>
+<p>This describes the classic ReAct pattern. The first message is a System message holding two templates, <code>TASK_INSTRUCTIONS</code> and <code>AVAILABLE_TOOLS</code>. The second is a User message with the question to answer. After that come the steps of the ReAct loop—two messages per step: an Assistant message with the LLM's reasoning and the tool it chose to call, followed by a Tool message with that tool's response. Once every step up to the current one has been included, we close with a final System message that asks the LLM to either continue the loop or reply to the user.</p>
 <ul class="feature-list">
   <li>System message with instructions and available tools</li>
   <li>User's original question</li>
