@@ -997,13 +997,13 @@ in a loop:</p>
     </div>
   </div>
 </div>
-<p>This describes the classic ReAct pattern. The first message is a System message holding two templates, <code>TASK_INSTRUCTIONS</code> and <code>AVAILABLE_TOOLS</code>. The second is a User message with the question to answer. After that come the steps of the ReAct loop—two messages per step: an Assistant message with the LLM's reasoning and the tool it chose to call, followed by a Tool message with that tool's response. Once every step up to the current one has been included, we close with a final System message that asks the LLM to either continue the loop or reply to the user.</p>
 <a href="visualizer.html?example=react" class="try-it">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <polygon points="5 3 19 12 5 21 5 3"></polygon>
   </svg>
   See this in the Live Editor
 </a>
+<p>This describes the classic ReAct pattern. The first message is a System message holding two templates, <code>TASK_INSTRUCTIONS</code> and <code>AVAILABLE_TOOLS</code>. The second is a User message with the question to answer. After that come the steps of the ReAct loop—two messages per step: an Assistant message with the LLM's reasoning and the tool it chose to call, followed by a Tool message with that tool's response. Once every step up to the current one has been included, we close with a final System message that asks the LLM to either continue the loop or reply to the user.</p>
 <p>Notice that this agent handles a single turn (the user's question) but takes multiple steps within it (the ReAct loop). We could also describe an agent that answers a series of questions, one after another, running a ReAct loop for each one. Here is an example description of such an agent:</p>
 <div class="code-and-render">
   <div class="code-panel">
@@ -1063,6 +1063,15 @@ in a loop:</p>
         <div class="role-body"><span class="ctx">sys.tool_used[<span class="idx">@T.i</span>].tool_response</span></div>
       </div>
     </div>
+  </div>
+</div>
+<div class="callout note">
+  <div class="callout-title">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+    No answer at turn T
+  </div>
+  <div class="callout-content">
+<p>Pay attention: the description never shows the LLM's answer for the current turn <code>T</code>. That's intentional—at the moment this context is assembled, turn <code>T</code> hasn't happened yet, so the model hasn't produced an answer. The context describes what we send <em>to</em> the model at turn <code>T</code>; the response only exists afterward.</p>
   </div>
 </div>
 </section>
