@@ -563,6 +563,34 @@
       font-weight: 500;
     }
 
+    /* Mark blocks - right bracket, compact */
+    .rendered-output .mark-block {
+      position: relative;
+      padding-right: 25px;
+      margin: 4px 0;
+    }
+    .rendered-output .mark-bracket {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+    }
+    .rendered-output .mark-line {
+      width: 5px;
+      height: 100%;
+      border: 2px solid #000;
+      border-left: none;
+      border-radius: 0 2px 2px 0;
+    }
+    .rendered-output .mark-num {
+      font-size: 9px;
+      font-weight: 700;
+      color: #000;
+      margin-left: 2px;
+    }
+
     @media (max-width: 700px) {
       .code-and-render {
         grid-template-columns: 1fr;
@@ -750,7 +778,7 @@ three sources:</p>
     </div>
   </div>
 </div>
-<p>This specification shows an assistent agent that recieves 2 messages. The first message's content is a Role Template that is dependent on the assistant's name. The second message is the user's input at turn T. We use the env prefix here to signify that this value originated in the environment. The [@T] after the prompt name means &quot;this prompt is parameterized by turn T&quot;.</p>
+<p>This specification shows an assistent agent that recieves 2 messages. The first message's content is a <code>ROLE</code> Template that is dependent on the assistant's name. The second message is the user's input at turn T. We use the env prefix here to signify that this value originated in the environment. The <code>@T</code> after the prompt name means &quot;this prompt is parameterized by turn T&quot;.</p>
 <div class="callout note">
   <div class="callout-title">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
@@ -790,7 +818,7 @@ describe which turn we're talking about:</p>
     </div>
   </div>
 </div>
-<p>This specification shows a coding agent that recieves 2 messages. The first message is a <code>Role</code> template, and the second message is the user's input at turn T. The <code>[@T]</code> after the prompt name means &quot;this prompt is parameterized by turn <code>T</code>&quot;. Notice here that we do not include any of the history.</p>
+<p>This specification is very similar to the previous example: it has two messages. The first is a <code>ROLE</code> template, this time with no arguments, and the second is a user message containing the user's input at turn T. The key difference is the time index: here the user input is parameterized by the current turn (<code>[@T]</code>), whereas in the earlier example it had no time index—meaning there was a single user input, constant across all turns. The <code>[@T]</code> after the prompt name means &quot;this prompt is parameterized by turn <code>T</code>&quot;. Notice that we do not include any of the history here.</p>
 <ul class="feature-list">
   <li><code>@T</code> - The current turn (a parameter)</li>
   <li><code>@1</code>, <code>@2</code>, etc. - Specific turn numbers</li>
@@ -890,7 +918,7 @@ describe which turn we're talking about:</p>
     <div class="step-number">6</div>
     <h2>Loops: Including Conversation History</h2>
   </div>
-<p>Instead of writing out each of the turns, if there is a recurring pattern of what you include in the history, use <code>ForEach</code> to loop through it:</p>
+<p>Instead of writing out each of the turns, if there is a recurring pattern of what you include in the history (or in any other case), use <code>ForEach</code> to loop through it:</p>
 <div class="code-and-render">
   <div class="code-panel">
     <pre><span class="template">ChatWithHistory</span>[<span class="context">@T</span>]: {
@@ -1143,6 +1171,91 @@ in a loop:</p>
   </div>
 </div>
 <p>This agent adapts its instructions based on whether documents and tools are available.</p>
+</section>
+<section id="step9" class="step">
+  <div class="step-header">
+    <div class="step-number">9</div>
+    <h2>Functions and Markers</h2>
+  </div>
+<p>Functions represent computed content—summarization, retrieval, formatting, or any transformation that cannot be expressed as a simple variable lookup. They are declared by name and purpose without defining their implementation; the name conveys semantic intent.</p>
+<p><strong>Markers</strong> annotate a section of a specification for visual emphasis in the rendered output. A mark draws a bracket along the side of the marked content with a number beside it (shown as <code>]1</code>), and is purely presentational—it doesn't change the prompt's meaning. You can wrap anything from a single content element to a large multi-message section, and use several marks with different numbers to highlight distinct parts.</p>
+<div class="code-and-render">
+  <div class="code-panel">
+    <pre><span class="template">ReactToolRagAtEnd</span>[<span class="context">@T</span>]: {
+    <span class="role">S</span>: {
+        <span class="template">INSTRUCTIONS</span>
+    }
+    <span class="role">U</span>: <span class="context">env.user_input</span>[<span class="context">@1</span>]
+    <span class="comment">// history</span>
+    <span class="keyword">ForEach</span>(<span class="context">t</span>: range(1, <span class="context">@T</span>)) {
+        <span class="role">A</span>: {
+            <span class="context">resp.tool_reasoning</span>[<span class="context">@t</span>]
+            <span class="context">sys.tool_used</span>[<span class="context">@t</span>]
+        }
+        <span class="role">T</span>: <span class="context">sys.tool_used</span>[<span class="context">@t</span>].tool_response
+    }
+    <span class="role">S</span>: {
+        <span class="keyword">Mark</span> 1 {
+            <span class="function">locate_tools</span>(<span class="context">env.user_input</span>[<span class="context">@1</span>])
+        }
+        <span class="template">USE_TOOLS_TO_SOLVE_TASK</span>
+    }
+}</pre>
+  </div>
+  <div class="rendered-output">
+    <div class="render-label">Rendered</div>
+    <div class="prompt-title"><h1>ReactToolRagAtEnd[<span class="idx">@T</span>]:</h1></div>
+    <div class="role-msg system">
+      <span class="role-badge">System</span>
+      <div class="role-body"><span class="tpl">INSTRUCTIONS</span></div>
+    </div>
+    <div class="role-msg user">
+      <span class="role-badge">User</span>
+      <div class="role-body"><span class="ctx">env.user_input[<span class="idx">@1</span>]</span></div>
+    </div>
+    <span class="cmt">// history</span>
+    <div class="ctrl-block">
+      <div class="ctrl-header">ForEach <span class="idx">t</span> : 1 ... <span class="idx">@T</span></div>
+      <div class="role-msg assistant">
+        <span class="role-badge">Assistant</span>
+        <div class="role-body">
+          <span class="ctx">resp.tool_reasoning[<span class="idx">@t</span>]</span><br>
+          <span class="ctx">sys.tool_used[<span class="idx">@t</span>]</span>
+        </div>
+      </div>
+      <div class="role-msg tool">
+        <span class="role-badge">Tool</span>
+        <div class="role-body"><span class="ctx">sys.tool_used[<span class="idx">@t</span>].tool_response</span></div>
+      </div>
+    </div>
+    <div class="role-msg system">
+      <span class="role-badge">System</span>
+      <div class="role-body">
+        <div class="mark-block">
+          <span class="fn">locate_tools(<span class="ctx">env.user_input[<span class="idx">@1</span>]</span>)</span>
+          <div class="mark-bracket">
+            <div class="mark-line"></div>
+            <span class="mark-num">1</span>
+          </div>
+        </div>
+        <span class="tpl">USE_TOOLS_TO_SOLVE_TASK</span>
+      </div>
+    </div>
+  </div>
+</div>
+<p>This specification describes a ReAct agent that retrieves its tools at the end of the context. The first message is a System message with the agent's <code>INSTRUCTIONS</code>, and the second is a User message holding the original task—<code>env.user_input[@1]</code>, fixed at the first turn. The <code>// history</code> loop then replays every previous step: for each turn <code>t</code> from 1 up to <code>@T</code>, an Assistant message with the model's reasoning for choosing the tool and the tool it used, followed by a Tool message with that tool's response. The final System message is where the function comes in: <code>locate_tools(env.user_input[@1])</code> is computed content—rather than looking up a stored value, it runs over the original task to retrieve the relevant tools—followed by the <code>USE_TOOLS_TO_SOLVE_TASK</code> template. The function is declared by name and purpose only; its implementation is left out of the specification. The <code>]1</code> on the right of the function is there to highlight the function.</p>
+</section>
+<section id="step10" class="step">
+  <div class="step-header">
+    <div class="step-number">10</div>
+    <h2>Fragments</h2>
+  </div>
+<p>Beyond messages and variables, ACDL gives you tools to reuse content and to highlight parts of a specification.</p>
+<p><strong>String fragments</strong> are reusable pieces of content with no role of their own. You define them with the <code>StrFrag</code> keyword and invoke them with <code>Frag</code>. When invoked, the content expands in place and inherits the role of the message it sits in, so the same content can be reused across different roles.</p>
+<!-- string fragment example to be added -->
+<p><strong>Role fragments</strong> are reusable groups of whole messages. You define them with the <code>RolesFrag</code> keyword and invoke them at the top level of a prompt, wherever a role message would be valid. They expand to the full sequence of role messages defined in the fragment body.</p>
+<!-- role fragment example to be added -->
+<p>Both kinds of fragment can take parameters in square brackets and are invoked with the same <code>Frag Name[args]</code> syntax; ACDL decides which kind is meant from context—inside a role block it resolves to a string fragment, at the top level to a role fragment.</p>
 </section>
 <section class="next-steps">
   <h2>What's Next?</h2>
