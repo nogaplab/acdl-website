@@ -1010,7 +1010,7 @@ in a loop:</p>
     <pre><span class="template">MultiTurnReactAgent</span>[<span class="context">@T</span>]: {
     <span class="role">S</span>: {
         <span class="template">TASK_DESCRIPTION</span>
-        <span class="context">env.tool_descriptions</span> <span class="comment">// description of each tool, how to use them, and when to use them</span>
+        <span class="context">env.tool_descriptions</span>
     }
     <span class="comment">// previous turns</span>
     <span class="keyword">ForEach</span>(<span class="context">@t</span>: range(1, <span class="context">@T</span>)) {
@@ -1033,7 +1033,7 @@ in a loop:</p>
       <span class="role-badge">System</span>
       <div class="role-body">
         <span class="tpl">TASK_DESCRIPTION</span><br>
-        <span class="ctx">env.tool_descriptions</span> <span class="cmt">// description of each tool, how to use them, and when to use them</span>
+        <span class="ctx">env.tool_descriptions</span>
       </div>
     </div>
     <span class="cmt">// previous turns</span>
