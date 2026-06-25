@@ -1060,13 +1060,13 @@
                 <span class="role-badge">Role: System</span>
                 <div class="role-body">
                   <span class="tpl">SYSTEM_PROMPT</span><br>
-                  <span class="tpl">ENV_INFO</span>(<span class="ctx">env.working_directory[<span class="idx">@1</span>]</span>, ...)
+                  <span class="tpl">ENV_INFO(<span class="ctx">env.working_directory[<span class="idx">@1</span>]</span>, ...)</span>
                 </div>
               </div>
               <div class="mark-block">
               <div style="margin: 4px 0;"><span class="name-kw">Name</span> <span class="name-var">C</span> <span class="name-assign">:=</span> <span class="ctx">sys.last_compaction_time[<span class="idx">@T</span>]</span></div>
               <div class="ctrl-block">
-                <div class="ctrl-header">? If <span class="idx">@$C</span> &gt; 1</div>
+                <div class="ctrl-header">◇ If <span class="idx">@$C</span> &gt; 1:</div>
                 <div class="role-msg user">
                   <span class="role-badge">Role: User</span>
                   <div class="role-body"><span class="tpl">WHAT_DID_WE_DO</span></div>
@@ -1086,13 +1086,13 @@
                     <span class="ctx">env.user_input[<span class="idx">@t</span>]</span>
                     <div class="mark-block">
                     <div class="ctrl-block">
-                      <div class="ctrl-header">? If <span class="idx">@T</span> == <span class="idx">@t</span></div>
+                      <div class="ctrl-header">◇ If <span class="idx">@T</span> == <span class="idx">@t</span>:</div>
                       <div class="ctrl-block">
-                        <div class="ctrl-header">? If <span class="ctx">sys.is_plan_mode[<span class="idx">@t</span>]</span></div>
+                        <div class="ctrl-header">◇ If <span class="ctx">sys.is_plan_mode[<span class="idx">@t</span>]</span>:</div>
                         <span class="tpl">PLAN_MODE_REMINDER</span>
                       </div>
                       <div class="ctrl-block">
-                        <div class="ctrl-header">? If <span class="ctx">sys.is_build_mode[<span class="idx">@t</span>]</span> && <span class="ctx">sys.prev_is_plan[<span class="idx">@t</span>]</span></div>
+                        <div class="ctrl-header">◇ If <span class="ctx">sys.is_build_mode[<span class="idx">@t</span>]</span> && <span class="ctx">sys.prev_is_plan[<span class="idx">@t</span>]</span>:</div>
                         <span class="tpl">LEAVE_PLAN_MODE_REMINDER</span>
                       </div>
                     </div>
@@ -1200,12 +1200,12 @@
               <div class="prompt-title">OpenClaw[<span class="idx">@T.I</span>]:</div>
               <div class="role-msg system">
                 <span class="role-badge">Role: System</span>
-                <div class="role-body"><span class="tpl">SystemPrompt</span>()</div>
+                <div class="role-body"><span class="tpl">SystemPrompt()</span></div>
               </div>
               <div class="mark-block">
               <div style="margin: 4px 0;"><span class="name-kw">Name</span> <span class="name-var">C</span> <span class="name-assign">:=</span> <span class="ctx">sys.last_compaction_time[<span class="idx">@T</span>]</span></div>
               <div class="ctrl-block">
-                <div class="ctrl-header">? If <span class="idx">@$C</span> &gt; 1</div>
+                <div class="ctrl-header">◇ If <span class="idx">@$C</span> &gt; 1:</div>
                 <div class="role-msg user">
                   <span class="role-badge">Role: User</span>
                   <div class="role-body">
@@ -1338,13 +1338,13 @@
                 <span class="role-badge">Role: Assistant</span>
                 <div class="role-body">
                   <div class="ctrl-block">
-                    <div class="ctrl-header">? If <span class="idx">@T</span> &gt; 1</div>
+                    <div class="ctrl-header">◇ If <span class="idx">@T</span> &gt; 1:</div>
                     <div class="ctrl-block">
                       <div class="ctrl-header">↻ ForEach <span class="idx">i</span> : <span class="idx">@T</span>-(<span class="idx">@T</span>%100) ... <span class="idx">@T</span>-1</div>
                       <span class="ctx">resp.action[<span class="idx">@i</span>]</span>
                     </div>
                     <div class="ctrl-block">
-                      <div class="ctrl-header">? If <span class="idx">@T</span>%100 == 0</div>
+                      <div class="ctrl-header">◇ If <span class="idx">@T</span>%100 == 0:</div>
                       <div style="margin-bottom: 6px;"><span class="name-kw">Name</span> <span class="name-var">actions</span> <span class="name-assign">:=</span> [<span class="ctx">resp.action[<span class="idx">@t</span>]</span> | <span class="idx">t</span> ∈ <span class="idx">@T</span>-100 ... <span class="idx">@T</span>]</div>
                       <span class="fn">summarize(<span class="name-var">actions</span>)</span>
                     </div>
@@ -1352,7 +1352,7 @@
                 </div>
               </div>
               <div class="ctrl-block">
-                <div class="ctrl-header">? If <span class="idx">@T</span>%25 == 0</div>
+                <div class="ctrl-header">◇ If <span class="idx">@T</span>%25 == 0:</div>
                 <div class="role-msg assistant">
                   <span class="role-badge">Role: Assistant</span>
                   <div class="role-body"><span class="ctx">critique_performance(sys.history[<span class="idx">@T</span>])</span></div>
@@ -1441,7 +1441,7 @@
                     <span class="ctx">retrieve(sys[agent].memory[<span class="idx">@T</span>], a.name)</span>
                   </div>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">? If <span class="ctx">sys[<span class="idx">agent</span>].in_conversation[<span class="idx">@T</span>]</span></div>
+                    <div class="ctrl-header">◇ If <span class="ctx">sys[<span class="idx">agent</span>].in_conversation[<span class="idx">@T</span>]</span>:</div>
                     <div class="ctrl-block">
                       <div class="ctrl-header">↻ ForEach <span class="idx">convTurn</span> : <span class="ctx">sys[<span class="idx">agent</span>].conversation[<span class="idx">@T</span>]</span></div>
                       <span class="ctx">convTurn.speaker</span> <span class="ctx">convTurn.content</span>
@@ -1454,7 +1454,7 @@
                 <div class="role-body">
                   <span class="ctx">sys[agent].available_actions</span>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">? If <span class="ctx">sys[<span class="idx">agent</span>].in_conversation[<span class="idx">@T</span>]</span></div>
+                    <div class="ctrl-header">◇ If <span class="ctx">sys[<span class="idx">agent</span>].in_conversation[<span class="idx">@T</span>]</span>:</div>
                     <span class="tpl">CONTINUE_THE_CONVERSATION</span>
                   </div>
                 </div>

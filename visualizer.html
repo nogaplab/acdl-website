@@ -16800,7 +16800,12 @@ var ACDL = (() => {
   }
 
   // src/renderPromptSvg.ts
-  var headerRightEdge = null;
+  function controlHeaderBanner(headerX, y, rightX, height) {
+    return svgRect(headerX, y, Math.max(0, rightX - headerX), height, {
+      fill: COLORS.controlHeaderBg,
+      rx: 2
+    });
+  }
   function isInlineBlock(_kind) {
     return false;
   }
@@ -18782,15 +18787,8 @@ var ACDL = (() => {
     }
     const headerHeight = tokenResult.height !== void 0 ? tokenResult.height + keywordFontSize + 6 : keywordFontSize + 6;
     const contentWidth = maxRenderedWidth + 8;
-    const boxWidth = headerRightEdge !== null ? Math.max(contentWidth, headerRightEdge - x) : contentWidth;
-    const bgRect = svgRect(x, y, boxWidth, headerHeight, {
-      fill: COLORS.controlHeaderBg,
-      rx: 2
-    });
     return {
-      svg: bgRect + "\n" + elements.join("\n"),
-      // Report the natural content width so layout/measurement is unaffected by
-      // the decorative full-width background.
+      svg: elements.join("\n"),
       width: contentWidth,
       height: headerHeight
     };
@@ -18847,72 +18845,71 @@ var ACDL = (() => {
     elements.push(...tokenResult.elements);
     currentX += tokenResult.width;
     const contentWidth = currentX - x + 8;
-    const boxWidth = headerRightEdge !== null ? Math.max(contentWidth, headerRightEdge - x) : contentWidth;
-    const bgRect = svgRect(x, y, boxWidth, headerHeight, {
-      fill: COLORS.controlHeaderBg,
-      rx: 2
-    });
     return {
-      svg: bgRect + "\n" + elements.join("\n"),
-      // Report natural content width; the full-width background is decorative.
+      svg: elements.join("\n"),
       width: contentWidth,
       height: headerHeight
     };
   }
   function renderLoopOutsideRole2(block, x, y, maxWidth) {
     const elements = [];
+    const banners = [];
     let currentY = y;
-    const headerResult = renderLoopHeader(block.index.value, block.iterable, x + 8, currentY);
+    const headerX = x + 8;
+    const childX = x + SPACING.indentSize + 8;
+    let contentRight = 0;
+    const headerResult = renderLoopHeader(block.index.value, block.iterable, headerX, currentY);
+    banners.push({ y: currentY, height: headerResult.height });
     elements.push(headerResult.svg);
+    contentRight = Math.max(contentRight, headerX + headerResult.width);
     currentY += headerResult.height + 5;
     const childMaxWidth = maxWidth ? maxWidth - SPACING.indentSize - 8 : void 0;
-    let resultMaxWidth = headerResult.width;
     for (const child of block.body) {
-      const childResult = renderTopLevelBlock2(child, x + SPACING.indentSize + 8, currentY, childMaxWidth);
+      const childResult = renderTopLevelBlock2(child, childX, currentY, childMaxWidth);
       elements.push(childResult.svg);
-      resultMaxWidth = Math.max(resultMaxWidth, childResult.width + SPACING.indentSize);
+      contentRight = Math.max(contentRight, childX + childResult.width);
       currentY += childResult.height + SPACING.blockGap;
     }
     const totalHeight = currentY - y;
-    elements.push(svgLine(x + 8, y, x + 8, y + totalHeight, {
+    elements.push(svgLine(headerX, y, headerX, y + totalHeight, {
       stroke: COLORS.controlBorder,
       strokeWidth: 1
     }));
+    const bannerSvg = banners.map((b) => controlHeaderBanner(headerX, b.y, contentRight, b.height)).join("\n");
     return {
-      svg: elements.join("\n"),
-      width: resultMaxWidth + 8,
+      svg: bannerSvg + "\n" + elements.join("\n"),
+      width: contentRight - x,
       height: totalHeight
     };
   }
   function renderLoopInsideRole2(block, x, y, maxWidthParam) {
     const elements = [];
+    const banners = [];
     let currentY = y;
-    console.log("[renderLoopInsideRole]", {
-      hasMaxWidthParam: !!maxWidthParam,
-      maxWidthParam,
-      bodyLength: block.body.length
-    });
-    const headerResult = renderLoopHeader(block.index.value, block.iterable, x + 8, currentY);
+    const headerX = x + 8;
+    const childX = x + SPACING.indentSize + 8;
+    let contentRight = 0;
+    const headerResult = renderLoopHeader(block.index.value, block.iterable, headerX, currentY);
+    banners.push({ y: currentY, height: headerResult.height });
     elements.push(headerResult.svg);
+    contentRight = Math.max(contentRight, headerX + headerResult.width);
     currentY += headerResult.height + 5;
     const childMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize - 8 : void 0;
-    console.log("[renderLoopInsideRole] childMaxWidth:", childMaxWidth);
-    let maxWidth = headerResult.width;
     for (const child of block.body) {
-      console.log("[renderLoopInsideRole] rendering child:", child.kind);
-      const childResult = renderRoleBuildingBlock2(child, x + SPACING.indentSize + 8, currentY, childMaxWidth);
+      const childResult = renderRoleBuildingBlock2(child, childX, currentY, childMaxWidth);
       elements.push(childResult.svg);
-      maxWidth = Math.max(maxWidth, childResult.width + SPACING.indentSize);
+      contentRight = Math.max(contentRight, childX + childResult.width);
       currentY += childResult.height + SPACING.elementGap;
     }
     const totalHeight = currentY - y;
-    elements.push(svgLine(x + 8, y, x + 8, y + totalHeight, {
+    elements.push(svgLine(headerX, y, headerX, y + totalHeight, {
       stroke: COLORS.controlBorder,
       strokeWidth: 1
     }));
+    const bannerSvg = banners.map((b) => controlHeaderBanner(headerX, b.y, contentRight, b.height)).join("\n");
     return {
-      svg: elements.join("\n"),
-      width: maxWidth + 8,
+      svg: bannerSvg + "\n" + elements.join("\n"),
+      width: contentRight - x,
       height: totalHeight
     };
   }
@@ -19296,7 +19293,6 @@ var ACDL = (() => {
   function renderPromptsSvg(blocks, maxWidth) {
     loadFonts();
     const startX = SPACING.containerPaddingLeft;
-    headerRightEdge = null;
     let maxContentWidth = 0;
     for (const block of blocks) {
       if (block.kind === "prompt") {
@@ -19318,7 +19314,6 @@ var ACDL = (() => {
       totalWidth = Math.min(totalWidth, maxWidth);
     }
     const titleWidth = totalWidth - startX - startX;
-    headerRightEdge = totalWidth - startX;
     const elements = [];
     let currentY = 20;
     let lastWasPrompt = false;
@@ -19364,7 +19359,6 @@ var ACDL = (() => {
       }
     }
     const totalHeight = currentY + 20;
-    headerRightEdge = null;
     return wrapSvg(elements.join("\n"), totalWidth, totalHeight);
   }
   return __toCommonJS(standalone_entry_exports);
