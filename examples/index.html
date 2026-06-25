@@ -1013,7 +1013,7 @@
             <pre><span class="template">OpenCodeMain</span>[<span class="context">@T.I</span>]: {
   <span class="role">S</span>: {
     <span class="template">SYSTEM_PROMPT</span>
-    <span class="template">ENV_INFO</span>(<span class="context">env.working_directory</span>[<span class="context">@1</span>], ...)
+    <span class="template">ENV_INFO</span>(<span class="context">env.working_directory</span>[<span class="context">@1</span>], <span class="context">env.is_dir_a_repo</span>[<span class="context">@1</span>], <span class="context">env.platform</span>[<span class="context">@1</span>], <span class="context">env.date</span>[<span class="context">@1</span>])
   }
   <span class="keyword">Mark</span> 2 {
   <span class="keyword">Name</span> C := <span class="context">sys.last_compaction_time</span>[<span class="context">@T</span>]
@@ -1060,26 +1060,26 @@
                 <span class="role-badge">Role: System</span>
                 <div class="role-body">
                   <span class="tpl">SYSTEM_PROMPT</span><br>
-                  <span class="tpl">ENV_INFO(<span class="ctx">env.working_directory[<span class="idx">@1</span>]</span>, ...)</span>
+                  <span class="tpl">ENV_INFO(<span class="ctx">env.working_directory[<span class="idx">@1</span>]</span>, <span class="ctx">env.is_dir_a_repo[<span class="idx">@1</span>]</span>, <span class="ctx">env.platform[<span class="idx">@1</span>]</span>, <span class="ctx">env.date[<span class="idx">@1</span>]</span>)</span>
                 </div>
               </div>
               <div class="mark-block">
               <div style="margin: 4px 0;"><span class="name-kw">Name</span> <span class="name-var">C</span> <span class="name-assign">:=</span> <span class="ctx">sys.last_compaction_time[<span class="idx">@T</span>]</span></div>
               <div class="ctrl-block">
-                <div class="ctrl-header">◇ If <span class="idx">@$C</span> &gt; 1:</div>
+                <div class="ctrl-header">◇ If <span class="idx">@</span><span class="name-var">C</span> &gt; 1:</div>
                 <div class="role-msg user">
                   <span class="role-badge">Role: User</span>
                   <div class="role-body"><span class="tpl">WHAT_DID_WE_DO</span></div>
                 </div>
                 <div class="role-msg assistant">
                   <span class="role-badge">Role: Assistant</span>
-                  <div class="role-body"><span class="ctx">sys.conversation_summary[<span class="idx">@$C</span>]</span></div>
+                  <div class="role-body"><span class="ctx">sys.conversation_summary[<span class="idx">@</span><span class="name-var">C</span>]</span></div>
                 </div>
               </div>
               <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">2</span></div>
               </div>
               <div class="ctrl-block">
-                <div class="ctrl-header">↻ ForEach <span class="idx">@t</span> : <span class="idx">@$C</span> ... <span class="idx">@T</span></div>
+                <div class="ctrl-header">↻ ForEach <span class="idx">@t</span> : <span class="idx">@</span><span class="name-var">C</span> ... <span class="idx">@T</span></div>
                 <div class="role-msg user">
                   <span class="role-badge">Role: User</span>
                   <div class="role-body">
@@ -1205,23 +1205,23 @@
               <div class="mark-block">
               <div style="margin: 4px 0;"><span class="name-kw">Name</span> <span class="name-var">C</span> <span class="name-assign">:=</span> <span class="ctx">sys.last_compaction_time[<span class="idx">@T</span>]</span></div>
               <div class="ctrl-block">
-                <div class="ctrl-header">◇ If <span class="idx">@$C</span> &gt; 1:</div>
+                <div class="ctrl-header">◇ If <span class="idx">@</span><span class="name-var">C</span> &gt; 1:</div>
                 <div class="role-msg user">
                   <span class="role-badge">Role: User</span>
                   <div class="role-body">
                     <span class="tpl">THIS_IS_A_SUMMARY</span><br>
-                    <span class="ctx">sys.conversation_summary[<span class="idx">@$C</span>]</span>
+                    <span class="ctx">sys.conversation_summary[<span class="idx">@</span><span class="name-var">C</span>]</span>
                   </div>
                 </div>
                 <div class="role-msg assistant">
                   <span class="role-badge">Role: Assistant</span>
-                  <div class="role-body"><span class="ctx">resp.response[<span class="idx">@$C</span>]</span></div>
+                  <div class="role-body"><span class="ctx">resp.response[<span class="idx">@</span><span class="name-var">C</span>]</span></div>
                 </div>
               </div>
               <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">2</span></div>
               </div>
               <div class="ctrl-block">
-                <div class="ctrl-header">↻ ForEach <span class="idx">t</span> : <span class="idx">@$C</span> + 1 ... <span class="idx">@T</span></div>
+                <div class="ctrl-header">↻ ForEach <span class="idx">t</span> : <span class="idx">@</span><span class="name-var">C</span> + 1 ... <span class="idx">@T</span></div>
                 <div class="role-msg user">
                   <span class="role-badge">Role: User</span>
                   <div class="role-body">

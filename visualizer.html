@@ -16992,6 +16992,10 @@ var ACDL = (() => {
     });
     return { svg, width, height: fontSize };
   }
+  function renderIndexList2(indices) {
+    if (indices.length === 0) return "";
+    return "[" + indices.map(indexToText).join(",") + "]";
+  }
   function indexToText(index) {
     const content = indexValueToText(index.value);
     if (index.kind === "time-index") {
@@ -17019,9 +17023,7 @@ var ACDL = (() => {
   }
   function pathToText(path2) {
     let result = path2.base;
-    if (path2.indices.length > 0) {
-      result += "[" + path2.indices.map(indexToText).join(",") + "]";
-    }
+    result += renderIndexList2(path2.indices);
     if (path2.next) {
       result += "." + pathToText(path2.next);
     }
@@ -17029,9 +17031,7 @@ var ACDL = (() => {
   }
   function contextVarToText(cv) {
     let result = cv.base;
-    if (cv.indices.length > 0) {
-      result += "[" + cv.indices.map(indexToText).join(",") + "]";
-    }
+    result += renderIndexList2(cv.indices);
     if (cv.path) {
       result += "." + pathToText(cv.path);
     }
@@ -17070,9 +17070,7 @@ var ACDL = (() => {
   }
   function nameRefToText(ref) {
     let result = stripNameRefPrefix(ref.name);
-    if (ref.indices.length > 0) {
-      result += "[" + ref.indices.map(indexToText).join(",") + "]";
-    }
+    result += renderIndexList2(ref.indices);
     if (ref.path) {
       result += "." + pathToText(ref.path);
     }
@@ -18851,25 +18849,103 @@ var ACDL = (() => {
       height: headerHeight
     };
   }
+  function wrapBlock2(header, children, x, y, opts) {
+    const elements = [];
+    const headerX = x + 8;
+    const childX = x + SPACING.indentSize + 8;
+    let currentY = y;
+    let contentRight = 0;
+    elements.push(header.svg);
+    contentRight = Math.max(contentRight, headerX + header.width);
+    const bannerHeight = header.height;
+    currentY += header.height + 5;
+    for (const child of children) {
+      const childResult = opts.renderChild(child, childX, currentY, opts.childMaxWidth);
+      elements.push(childResult.svg);
+      contentRight = Math.max(contentRight, childX + childResult.width);
+      currentY += childResult.height + opts.childGap;
+    }
+    const totalHeight = currentY - y;
+    elements.push(svgLine(headerX, y, headerX, y + totalHeight, {
+      stroke: COLORS.controlBorder,
+      strokeWidth: 1
+    }));
+    let svg = elements.join("\n");
+    if (opts.drawBanner) {
+      const bannerSvg = controlHeaderBanner(headerX, y, contentRight, bannerHeight);
+      svg = bannerSvg + "\n" + svg;
+    }
+    return {
+      svg,
+      width: contentRight - x,
+      height: totalHeight
+    };
+  }
   function renderLoopOutsideRole2(block, x, y, maxWidth) {
+    const header = renderLoopHeader(block.index.value, block.iterable, x + 8, y);
+    const childMaxWidth = maxWidth ? maxWidth - SPACING.indentSize - 8 : void 0;
+    return wrapBlock2(header, block.body, x, y, {
+      renderChild: (child, cx, cy, mw) => renderTopLevelBlock2(child, cx, cy, mw),
+      childMaxWidth,
+      childGap: SPACING.blockGap,
+      drawBanner: true
+    });
+  }
+  function renderLoopInsideRole2(block, x, y, maxWidthParam) {
+    const header = renderLoopHeader(block.index.value, block.iterable, x + 8, y);
+    const childMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize - 8 : void 0;
+    return wrapBlock2(header, block.body, x, y, {
+      renderChild: (child, cx, cy, mw) => renderRoleBuildingBlock2(child, cx, cy, mw),
+      childMaxWidth,
+      childGap: SPACING.elementGap,
+      drawBanner: true
+    });
+  }
+  function renderConditionalOutsideRole2(block, x, y, maxWidthParam) {
     const elements = [];
     const banners = [];
     let currentY = y;
     const headerX = x + 8;
     const childX = x + SPACING.indentSize + 8;
     let contentRight = 0;
-    const headerResult = renderLoopHeader(block.index.value, block.iterable, headerX, currentY);
-    banners.push({ y: currentY, height: headerResult.height });
-    elements.push(headerResult.svg);
-    contentRight = Math.max(contentRight, headerX + headerResult.width);
-    currentY += headerResult.height + 5;
-    const childMaxWidth = maxWidth ? maxWidth - SPACING.indentSize - 8 : void 0;
-    for (const child of block.body) {
+    const childMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize - 8 : void 0;
+    const ifHeader = renderControlFlowHeader("If", "\u25C7", block.Ifcondition, ":", headerX, currentY, maxWidthParam);
+    banners.push({ y: currentY, height: ifHeader.height });
+    elements.push(ifHeader.svg);
+    contentRight = Math.max(contentRight, headerX + ifHeader.width);
+    currentY += ifHeader.height + 5;
+    for (const child of block.IfBody) {
       const childResult = renderTopLevelBlock2(child, childX, currentY, childMaxWidth);
       elements.push(childResult.svg);
       contentRight = Math.max(contentRight, childX + childResult.width);
       currentY += childResult.height + SPACING.blockGap;
     }
+    for (let i = 0; i < block.elseif.length; i++) {
+      const elseifHeader = renderControlFlowHeader("ElseIf", "\u25C7", block.elseif[i], ":", headerX, currentY, maxWidthParam);
+      banners.push({ y: currentY, height: elseifHeader.height });
+      elements.push(elseifHeader.svg);
+      contentRight = Math.max(contentRight, headerX + elseifHeader.width);
+      currentY += elseifHeader.height + 5;
+      for (const child of block.elseifBody[i]) {
+        const childResult = renderTopLevelBlock2(child, childX, currentY, childMaxWidth);
+        elements.push(childResult.svg);
+        contentRight = Math.max(contentRight, childX + childResult.width);
+        currentY += childResult.height + SPACING.blockGap;
+      }
+    }
+    if (block.elseBody && block.elseBody.length > 0) {
+      const elseHeader = renderControlFlowHeader("Else", "\u25C7", [], ":", headerX, currentY, maxWidthParam);
+      banners.push({ y: currentY, height: elseHeader.height });
+      elements.push(elseHeader.svg);
+      contentRight = Math.max(contentRight, headerX + elseHeader.width);
+      currentY += elseHeader.height + 5;
+      for (const child of block.elseBody) {
+        const childResult = renderTopLevelBlock2(child, childX, currentY, childMaxWidth);
+        elements.push(childResult.svg);
+        contentRight = Math.max(contentRight, childX + childResult.width);
+        currentY += childResult.height + SPACING.blockGap;
+      }
+    }
     const totalHeight = currentY - y;
     elements.push(svgLine(headerX, y, headerX, y + totalHeight, {
       stroke: COLORS.controlBorder,
@@ -18882,24 +18958,50 @@ var ACDL = (() => {
       height: totalHeight
     };
   }
-  function renderLoopInsideRole2(block, x, y, maxWidthParam) {
+  function renderConditionalInsideRole2(block, x, y, maxWidthParam) {
     const elements = [];
     const banners = [];
     let currentY = y;
     const headerX = x + 8;
     const childX = x + SPACING.indentSize + 8;
     let contentRight = 0;
-    const headerResult = renderLoopHeader(block.index.value, block.iterable, headerX, currentY);
-    banners.push({ y: currentY, height: headerResult.height });
-    elements.push(headerResult.svg);
-    contentRight = Math.max(contentRight, headerX + headerResult.width);
-    currentY += headerResult.height + 5;
+    const ifHeader = renderControlFlowHeader("If", "\u25C7", block.Ifcondition, ":", headerX, currentY, maxWidthParam);
+    banners.push({ y: currentY, height: ifHeader.height });
+    elements.push(ifHeader.svg);
+    contentRight = Math.max(contentRight, headerX + ifHeader.width);
+    currentY += ifHeader.height + 5;
     const childMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize - 8 : void 0;
-    for (const child of block.body) {
+    for (const child of block.IfBody) {
       const childResult = renderRoleBuildingBlock2(child, childX, currentY, childMaxWidth);
       elements.push(childResult.svg);
       contentRight = Math.max(contentRight, childX + childResult.width);
       currentY += childResult.height + SPACING.elementGap;
+    }
+    for (let i = 0; i < block.elseif.length; i++) {
+      const elseifHeader = renderControlFlowHeader("ElseIf", "\u25C7", block.elseif[i], ":", headerX, currentY, maxWidthParam);
+      banners.push({ y: currentY, height: elseifHeader.height });
+      elements.push(elseifHeader.svg);
+      contentRight = Math.max(contentRight, headerX + elseifHeader.width);
+      currentY += elseifHeader.height + 5;
+      for (const child of block.elseifBody[i]) {
+        const childResult = renderRoleBuildingBlock2(child, childX, currentY, childMaxWidth);
+        elements.push(childResult.svg);
+        contentRight = Math.max(contentRight, childX + childResult.width);
+        currentY += childResult.height + SPACING.elementGap;
+      }
+    }
+    if (block.elseBody && block.elseBody.length > 0) {
+      const elseHeader = renderControlFlowHeader("Else", "\u25C7", [], ":", headerX, currentY, maxWidthParam);
+      banners.push({ y: currentY, height: elseHeader.height });
+      elements.push(elseHeader.svg);
+      contentRight = Math.max(contentRight, headerX + elseHeader.width);
+      currentY += elseHeader.height + 5;
+      for (const child of block.elseBody) {
+        const childResult = renderRoleBuildingBlock2(child, childX, currentY, childMaxWidth);
+        elements.push(childResult.svg);
+        contentRight = Math.max(contentRight, childX + childResult.width);
+        currentY += childResult.height + SPACING.elementGap;
+      }
     }
     const totalHeight = currentY - y;
     elements.push(svgLine(headerX, y, headerX, y + totalHeight, {
@@ -18913,213 +19015,115 @@ var ACDL = (() => {
       height: totalHeight
     };
   }
-  function renderConditionalOutsideRole2(block, x, y, maxWidthParam) {
-    const elements = [];
-    let currentY = y;
-    let resultMaxWidth = 0;
-    const childMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize - 8 : void 0;
-    const ifHeader = renderControlFlowHeader("If", "\u25C7", block.Ifcondition, ":", x + 8, currentY, maxWidthParam);
-    elements.push(ifHeader.svg);
-    resultMaxWidth = Math.max(resultMaxWidth, ifHeader.width);
-    currentY += ifHeader.height + 5;
-    for (const child of block.IfBody) {
-      const childResult = renderTopLevelBlock2(child, x + SPACING.indentSize + 8, currentY, childMaxWidth);
-      elements.push(childResult.svg);
-      resultMaxWidth = Math.max(resultMaxWidth, childResult.width + SPACING.indentSize);
-      currentY += childResult.height + SPACING.blockGap;
-    }
-    for (let i = 0; i < block.elseif.length; i++) {
-      const elseifHeader = renderControlFlowHeader("ElseIf", "\u25C7", block.elseif[i], ":", x + 8, currentY, maxWidthParam);
-      elements.push(elseifHeader.svg);
-      resultMaxWidth = Math.max(resultMaxWidth, elseifHeader.width);
-      currentY += elseifHeader.height + 5;
-      for (const child of block.elseifBody[i]) {
-        const childResult = renderTopLevelBlock2(child, x + SPACING.indentSize + 8, currentY, childMaxWidth);
-        elements.push(childResult.svg);
-        resultMaxWidth = Math.max(resultMaxWidth, childResult.width + SPACING.indentSize);
-        currentY += childResult.height + SPACING.blockGap;
-      }
-    }
-    if (block.elseBody && block.elseBody.length > 0) {
-      const elseHeader = renderControlFlowHeader("Else", "\u25C7", [], ":", x + 8, currentY, maxWidthParam);
-      elements.push(elseHeader.svg);
-      resultMaxWidth = Math.max(resultMaxWidth, elseHeader.width);
-      currentY += elseHeader.height + 5;
-      for (const child of block.elseBody) {
-        const childResult = renderTopLevelBlock2(child, x + SPACING.indentSize + 8, currentY, childMaxWidth);
-        elements.push(childResult.svg);
-        resultMaxWidth = Math.max(resultMaxWidth, childResult.width + SPACING.indentSize);
-        currentY += childResult.height + SPACING.blockGap;
-      }
-    }
-    const totalHeight = currentY - y;
-    elements.push(svgLine(x + 8, y, x + 8, y + totalHeight, {
-      stroke: COLORS.controlBorder,
-      strokeWidth: 1
-    }));
-    return {
-      svg: elements.join("\n"),
-      width: resultMaxWidth + 8,
-      height: totalHeight
-    };
-  }
-  function renderConditionalInsideRole2(block, x, y, maxWidthParam) {
-    const elements = [];
-    let currentY = y;
-    let maxWidth = 0;
-    console.log("[renderConditionalInsideRole]", {
-      hasMaxWidthParam: !!maxWidthParam,
-      maxWidthParam,
-      condition: block.Ifcondition.map((t) => t.value).join("")
-    });
-    const ifHeader = renderControlFlowHeader("If", "\u25C7", block.Ifcondition, ":", x + 8, currentY, maxWidthParam);
-    elements.push(ifHeader.svg);
-    maxWidth = Math.max(maxWidth, ifHeader.width);
-    currentY += ifHeader.height + 5;
-    const childMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize - 8 : void 0;
-    console.log("[renderConditionalInsideRole] childMaxWidth for IfBody:", childMaxWidth, "from maxWidthParam:", maxWidthParam);
-    for (const child of block.IfBody) {
-      console.log("[renderConditionalInsideRole] rendering IfBody child:", child.kind, "with childMaxWidth:", childMaxWidth);
-      const childResult = renderRoleBuildingBlock2(child, x + SPACING.indentSize + 8, currentY, childMaxWidth);
-      elements.push(childResult.svg);
-      maxWidth = Math.max(maxWidth, childResult.width + SPACING.indentSize);
-      currentY += childResult.height + SPACING.elementGap;
-    }
-    for (let i = 0; i < block.elseif.length; i++) {
-      const elseifHeader = renderControlFlowHeader("ElseIf", "\u25C7", block.elseif[i], ":", x + 8, currentY, maxWidthParam);
-      elements.push(elseifHeader.svg);
-      maxWidth = Math.max(maxWidth, elseifHeader.width);
-      currentY += elseifHeader.height + 5;
-      for (const child of block.elseifBody[i]) {
-        const childResult = renderRoleBuildingBlock2(child, x + SPACING.indentSize + 8, currentY, childMaxWidth);
-        elements.push(childResult.svg);
-        maxWidth = Math.max(maxWidth, childResult.width + SPACING.indentSize);
-        currentY += childResult.height + SPACING.elementGap;
-      }
-    }
-    if (block.elseBody && block.elseBody.length > 0) {
-      const elseHeader = renderControlFlowHeader("Else", "\u25C7", [], ":", x + 8, currentY, maxWidthParam);
-      elements.push(elseHeader.svg);
-      maxWidth = Math.max(maxWidth, elseHeader.width);
-      currentY += elseHeader.height + 5;
-      for (const child of block.elseBody) {
-        const childResult = renderRoleBuildingBlock2(child, x + SPACING.indentSize + 8, currentY, childMaxWidth);
-        elements.push(childResult.svg);
-        maxWidth = Math.max(maxWidth, childResult.width + SPACING.indentSize);
-        currentY += childResult.height + SPACING.elementGap;
-      }
-    }
-    const totalHeight = currentY - y;
-    elements.push(svgLine(x + 8, y, x + 8, y + totalHeight, {
-      stroke: COLORS.controlBorder,
-      strokeWidth: 1
-    }));
-    return {
-      svg: elements.join("\n"),
-      width: maxWidth + 8,
-      height: totalHeight
-    };
-  }
   function renderSwitchOutsideRole2(block, x, y, maxWidthParam) {
     const elements = [];
+    const caseBanners = [];
     let currentY = y;
-    let resultMaxWidth = 0;
+    const switchHeaderX = x + 8;
+    const caseHeaderX = x + SPACING.indentSize + 8;
+    const caseBodyX = x + SPACING.indentSize * 2 + 8;
+    let contentRight = 0;
     const childMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize * 2 - 8 : void 0;
     const switchTokens = [
       { type: "SYMBOL", value: "(" },
       ...block.expression,
       { type: "SYMBOL", value: ")" }
     ];
-    const switchHeader = renderControlFlowHeader("Switch", "\u2387", switchTokens, ":", x + 8, currentY, maxWidthParam);
+    const switchHeader = renderControlFlowHeader("Switch", "\u2387", switchTokens, ":", switchHeaderX, currentY, maxWidthParam);
+    const switchBanner = { y: currentY, height: switchHeader.height };
     elements.push(switchHeader.svg);
-    resultMaxWidth = Math.max(resultMaxWidth, switchHeader.width);
+    contentRight = Math.max(contentRight, switchHeaderX + switchHeader.width);
     currentY += switchHeader.height + 4;
-    for (const c of block.cases) {
+    const renderCase = (match, keyword, body) => {
       const caseMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize : void 0;
-      const caseHeader = renderControlFlowHeader("Case", "", c.match, "", x + SPACING.indentSize + 8, currentY, caseMaxWidth);
+      const caseHeader = renderControlFlowHeader(keyword, "", match, keyword === "Default" ? ":" : "", caseHeaderX, currentY, caseMaxWidth);
+      const banner = { y: currentY, height: caseHeader.height };
       elements.push(caseHeader.svg);
-      resultMaxWidth = Math.max(resultMaxWidth, caseHeader.width + SPACING.indentSize);
+      let caseRight = caseHeaderX + caseHeader.width;
       currentY += caseHeader.height + 5;
-      for (const child of c.body) {
-        const childResult = renderTopLevelBlock2(child, x + SPACING.indentSize * 2 + 8, currentY, childMaxWidth);
+      for (const child of body) {
+        const childResult = renderTopLevelBlock2(child, caseBodyX, currentY, childMaxWidth);
         elements.push(childResult.svg);
-        resultMaxWidth = Math.max(resultMaxWidth, childResult.width + SPACING.indentSize * 2);
+        caseRight = Math.max(caseRight, caseBodyX + childResult.width);
         currentY += childResult.height + SPACING.blockGap;
       }
+      caseBanners.push({ ...banner, right: caseRight });
+      contentRight = Math.max(contentRight, caseRight);
+    };
+    for (const c of block.cases) {
+      renderCase(c.match, "Case", c.body);
     }
     if (block.defaultCase) {
-      const caseMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize : void 0;
-      const defaultHeader = renderControlFlowHeader("Default", "", [], ":", x + SPACING.indentSize + 8, currentY, caseMaxWidth);
-      elements.push(defaultHeader.svg);
-      resultMaxWidth = Math.max(resultMaxWidth, defaultHeader.width + SPACING.indentSize);
-      currentY += defaultHeader.height + 5;
-      for (const child of block.defaultCase.body) {
-        const childResult = renderTopLevelBlock2(child, x + SPACING.indentSize * 2 + 8, currentY, childMaxWidth);
-        elements.push(childResult.svg);
-        resultMaxWidth = Math.max(resultMaxWidth, childResult.width + SPACING.indentSize * 2);
-        currentY += childResult.height + SPACING.blockGap;
-      }
+      renderCase([], "Default", block.defaultCase.body);
     }
     const totalHeight = currentY - y;
-    elements.push(svgLine(x + 8, y, x + 8, y + totalHeight, {
+    elements.push(svgLine(switchHeaderX, y, switchHeaderX, y + totalHeight, {
       stroke: COLORS.controlBorder,
       strokeWidth: 1
     }));
+    const bannerSvg = [
+      controlHeaderBanner(switchHeaderX, switchBanner.y, contentRight, switchBanner.height),
+      ...caseBanners.map((b) => controlHeaderBanner(caseHeaderX, b.y, b.right, b.height))
+    ].join("\n");
     return {
-      svg: elements.join("\n"),
-      width: resultMaxWidth + 8,
+      svg: bannerSvg + "\n" + elements.join("\n"),
+      width: contentRight - x,
       height: totalHeight
     };
   }
   function renderSwitchInsideRole2(block, x, y, maxWidthParam) {
     const elements = [];
+    const caseBanners = [];
     let currentY = y;
-    let maxWidth = 0;
+    const switchHeaderX = x + 8;
+    const caseHeaderX = x + SPACING.indentSize + 8;
+    const caseBodyX = x + SPACING.indentSize * 2 + 8;
+    let contentRight = 0;
     const switchTokens = [
       { type: "SYMBOL", value: "(" },
       ...block.expression,
       { type: "SYMBOL", value: ")" }
     ];
-    const switchHeader = renderControlFlowHeader("Switch", "\u2387", switchTokens, ":", x + 8, currentY, maxWidthParam);
+    const switchHeader = renderControlFlowHeader("Switch", "\u2387", switchTokens, ":", switchHeaderX, currentY, maxWidthParam);
+    const switchBanner = { y: currentY, height: switchHeader.height };
     elements.push(switchHeader.svg);
-    maxWidth = Math.max(maxWidth, switchHeader.width);
+    contentRight = Math.max(contentRight, switchHeaderX + switchHeader.width);
     currentY += switchHeader.height + 4;
-    for (const c of block.cases) {
+    const renderCase = (match, keyword, body) => {
       const caseMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize : void 0;
-      const caseHeader = renderControlFlowHeader("Case", "", c.match, "", x + SPACING.indentSize + 8, currentY, caseMaxWidth);
+      const caseHeader = renderControlFlowHeader(keyword, "", match, keyword === "Default" ? ":" : "", caseHeaderX, currentY, caseMaxWidth);
+      const banner = { y: currentY, height: caseHeader.height };
       elements.push(caseHeader.svg);
-      maxWidth = Math.max(maxWidth, caseHeader.width + SPACING.indentSize);
+      let caseRight = caseHeaderX + caseHeader.width;
       currentY += caseHeader.height + 5;
       const caseBodyMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize * 2 - 8 : void 0;
-      for (const child of c.body) {
-        const childResult = renderRoleBuildingBlock2(child, x + SPACING.indentSize * 2 + 8, currentY, caseBodyMaxWidth);
+      for (const child of body) {
+        const childResult = renderRoleBuildingBlock2(child, caseBodyX, currentY, caseBodyMaxWidth);
         elements.push(childResult.svg);
-        maxWidth = Math.max(maxWidth, childResult.width + SPACING.indentSize * 2);
+        caseRight = Math.max(caseRight, caseBodyX + childResult.width);
         currentY += childResult.height + SPACING.elementGap;
       }
+      caseBanners.push({ ...banner, right: caseRight });
+      contentRight = Math.max(contentRight, caseRight);
+    };
+    for (const c of block.cases) {
+      renderCase(c.match, "Case", c.body);
     }
     if (block.defaultCase) {
-      const caseMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize : void 0;
-      const defaultHeader = renderControlFlowHeader("Default", "", [], ":", x + SPACING.indentSize + 8, currentY, caseMaxWidth);
-      elements.push(defaultHeader.svg);
-      maxWidth = Math.max(maxWidth, defaultHeader.width + SPACING.indentSize);
-      currentY += defaultHeader.height + 5;
-      const defaultBodyMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize * 2 - 8 : void 0;
-      for (const child of block.defaultCase.body) {
-        const childResult = renderRoleBuildingBlock2(child, x + SPACING.indentSize * 2 + 8, currentY, defaultBodyMaxWidth);
-        elements.push(childResult.svg);
-        maxWidth = Math.max(maxWidth, childResult.width + SPACING.indentSize * 2);
-        currentY += childResult.height + SPACING.elementGap;
-      }
+      renderCase([], "Default", block.defaultCase.body);
     }
     const totalHeight = currentY - y;
-    elements.push(svgLine(x + 8, y, x + 8, y + totalHeight, {
+    elements.push(svgLine(switchHeaderX, y, switchHeaderX, y + totalHeight, {
       stroke: COLORS.controlBorder,
       strokeWidth: 1
     }));
+    const bannerSvg = [
+      controlHeaderBanner(switchHeaderX, switchBanner.y, contentRight, switchBanner.height),
+      ...caseBanners.map((b) => controlHeaderBanner(caseHeaderX, b.y, b.right, b.height))
+    ].join("\n");
     return {
-      svg: elements.join("\n"),
-      width: maxWidth + 8,
+      svg: bannerSvg + "\n" + elements.join("\n"),
+      width: contentRight - x,
       height: totalHeight
     };
   }
@@ -19233,13 +19237,19 @@ var ACDL = (() => {
         return { svg: "", width: 0, height: 0 };
     }
   }
+  function renderPromptBodyItem2(item, x, y, maxWidth) {
+    if (item.kind === "mark-block") {
+      return renderMarkBlock2(item, x, y, maxWidth);
+    }
+    return renderTopLevelBlock2(item, x, y, maxWidth);
+  }
   function renderPromptBody2(body, x, y, maxWidthParam) {
     if (body.kind === "chat-prompt-body") {
       const elements = [];
       let currentY = y;
       let resultMaxWidth = 0;
       for (const item of body.body) {
-        const result = renderTopLevelBlock2(item, x, currentY, maxWidthParam);
+        const result = renderPromptBodyItem2(item, x, currentY, maxWidthParam);
         elements.push(result.svg);
         resultMaxWidth = Math.max(resultMaxWidth, result.width);
         currentY += result.height + SPACING.blockGap;
@@ -19255,10 +19265,7 @@ var ACDL = (() => {
   }
   function renderPromptTitle2(title, x, y, containerWidth) {
     const elements = [];
-    let indexText = "";
-    if (title.indices.length > 0) {
-      indexText = "[" + title.indices.map(indexToText).join(",") + "]";
-    }
+    const indexText = renderIndexList2(title.indices);
     const fullTitle = title.name + indexText;
     const titleWidth = measureText(fullTitle, FONT_SIZES.title, true);
     const boxWidth = Math.max(titleWidth + 16, containerWidth);
