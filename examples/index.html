@@ -573,6 +573,32 @@
       margin-left: 2px;
     }
 
+    /* PromptEndsHere - dashed line + bold text */
+    .rendered-output .end-block {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 4px 0;
+      margin-left: -10px;
+      padding: 2px 0;
+      padding-right: 6px;
+      font-size: 9px;
+      width: calc(100% + 10px);
+    }
+    .rendered-output .end-line {
+      flex: 1;
+      height: 1px;
+      background: repeating-linear-gradient(to right, #6e7781 0, #6e7781 4px, transparent 4px, transparent 8px);
+      min-width: 10px;
+      margin-left: 10px;
+    }
+    .rendered-output .end-text {
+      color: #000;
+      font-weight: 800;
+      white-space: nowrap;
+      font-size: 9px;
+    }
+
     /* Name definitions - compact */
     .rendered-output .name-kw {
       font-weight: 800;
@@ -743,7 +769,7 @@
                 <div class="role-body">
                   <div style="margin-bottom: 6px;"><span class="name-kw">Name</span> <span class="name-var">docs</span> <span class="name-assign">:=</span> <span class="fn">k_relevant_docs(<span class="ctx">env.user_input[<span class="idx">@T</span>]</span>)</span></div>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">↻ ForEach i : 1 ... <span class="name-var">docs</span>.len</div>
+                    <div class="ctrl-header">↻ ForEach <span class="idx">i</span> : 1 ... <span class="name-var">docs</span>.len</div>
                     <span class="name-var">docs</span>[i].source<br>
                     <span class="name-var">docs</span>[i].content
                   </div>
@@ -952,7 +978,7 @@
                 <div class="role-body">
                   <div style="margin-bottom: 6px;"><span class="name-kw">Name</span> <span class="name-var">tools</span> <span class="name-assign">:=</span> <span class="fn">retrieve_tools(<span class="ctx">env.context[<span class="idx">@T</span>]</span>)</span></div>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">↻ ForEach tool : <span class="name-var">tools</span></div>
+                    <div class="ctrl-header">↻ ForEach <span class="idx">tool</span> : <span class="name-var">tools</span></div>
                     <span class="name-var">tool</span>.description
                   </div>
                   <span class="tpl">USE_TOOLS_TO_SOLVE_TASK</span>
@@ -1062,11 +1088,11 @@
                     <div class="ctrl-block">
                       <div class="ctrl-header">? If <span class="idx">@T</span> == <span class="idx">@t</span></div>
                       <div class="ctrl-block">
-                        <div class="ctrl-header">? If sys.is_plan_mode[<span class="idx">@t</span>]</div>
+                        <div class="ctrl-header">? If <span class="ctx">sys.is_plan_mode[<span class="idx">@t</span>]</span></div>
                         <span class="tpl">PLAN_MODE_REMINDER</span>
                       </div>
                       <div class="ctrl-block">
-                        <div class="ctrl-header">? If sys.is_build_mode[<span class="idx">@t</span>] && sys.prev_is_plan[<span class="idx">@t</span>]</div>
+                        <div class="ctrl-header">? If <span class="ctx">sys.is_build_mode[<span class="idx">@t</span>]</span> && <span class="ctx">sys.prev_is_plan[<span class="idx">@t</span>]</span></div>
                         <span class="tpl">LEAVE_PLAN_MODE_REMINDER</span>
                       </div>
                     </div>
@@ -1074,7 +1100,10 @@
                     </div>
                   </div>
                 </div>
-                <div style="background: #fff3cd; border: 1px solid #e5990b; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #856404; font-weight: 500;">PromptEndsHere when (<span class="idx">@T</span> == <span class="idx">@t</span> && <span class="idx">@T</span>.0)</div>
+                <div class="end-block">
+                  <div class="end-line"></div>
+                  <span class="end-text">PromptEndsHere when (<span class="idx">@T</span> == <span class="idx">@t</span> && <span class="idx">@T</span>.0)</span>
+                </div>
                 <div class="mark-block">
                 <div class="ctrl-block">
                   <div class="ctrl-header">↻ ForEach <span class="idx">@i</span> : 1 ... <span class="idx">@t</span>.substeps</div>
@@ -1082,19 +1111,22 @@
                     <span class="role-badge">Role: Assistant</span>
                     <div class="role-body">
                       <div class="ctrl-block">
-                        <div class="ctrl-header">↻ ForEach tool : sys.tool_requests[<span class="idx">@t.i</span>]</div>
+                        <div class="ctrl-header">↻ ForEach <span class="idx">tool</span> : <span class="ctx">sys.tool_requests[<span class="idx">@t.i</span>]</span></div>
                         <span class="ctx">tool.id_name_and_args</span>
                       </div>
                     </div>
                   </div>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">↻ ForEach tool : tool_requests[<span class="idx">@t.i</span>]</div>
+                    <div class="ctrl-header">↻ ForEach <span class="idx">tool</span> : <span class="ctx">tool_requests[<span class="idx">@t.i</span>]</span></div>
                     <div class="role-msg tool">
                       <span class="role-badge">Role: Tool</span>
                       <div class="role-body"><span class="ctx">tool.id_and_response</span></div>
                     </div>
                   </div>
-                  <div style="background: #fff3cd; border: 1px solid #e5990b; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #856404; font-weight: 500;">PromptEndsHere when (<span class="idx">@T</span> == <span class="idx">@t</span> && <span class="idx">@T</span>.I)</div>
+                  <div class="end-block">
+                    <div class="end-line"></div>
+                    <span class="end-text">PromptEndsHere when (<span class="idx">@T</span> == <span class="idx">@t</span> && <span class="idx">@T</span>.I)</span>
+                  </div>
                 </div>
                 <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">1</span></div>
                 </div>
@@ -1189,13 +1221,13 @@
               <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">2</span></div>
               </div>
               <div class="ctrl-block">
-                <div class="ctrl-header">↻ ForEach t : <span class="idx">@$C</span> + 1 ... <span class="idx">@T</span></div>
+                <div class="ctrl-header">↻ ForEach <span class="idx">t</span> : <span class="idx">@$C</span> + 1 ... <span class="idx">@T</span></div>
                 <div class="role-msg user">
                   <span class="role-badge">Role: User</span>
                   <div class="role-body">
                     <div class="mark-block">
                     <div class="ctrl-block">
-                      <div class="ctrl-header">↻ ForEach m : 1 ... sys.pending_messages[<span class="idx">@t</span>].len</div>
+                      <div class="ctrl-header">↻ ForEach <span class="idx">m</span> : 1 ... <span class="ctx">sys.pending_messages[<span class="idx">@t</span>].len</span></div>
                       <span class="ctx">sys.pending_messages[<span class="idx">@t</span>][m].date_time</span><br>
                       <span class="ctx">sys.pending_messages[<span class="idx">@t</span>][m].message</span>
                     </div>
@@ -1203,7 +1235,7 @@
                     </div>
                     <div class="mark-block">
                     <div class="ctrl-block">
-                      <div class="ctrl-header">⇢ Switch env.input_source[<span class="idx">@t</span>]</div>
+                      <div class="ctrl-header">⇢ Switch <span class="ctx">env.input_source[<span class="idx">@t</span>]</span></div>
                       <div style="padding-left: 8px; border-left: 1px dashed #adb5bd;">
                         <span class="cmt">Case user:</span> <span style="display:inline-flex;align-items:center;"><span class="ctx">sys.date_time[<span class="idx">@t</span>]</span><span style="display:inline-block;width:3px;align-self:stretch;border:2px solid #000;border-left:none;border-radius:0 2px 2px 0;margin-left:2px;"></span><span class="mark-num">4</span></span> <span class="ctx">env.user_query[<span class="idx">@t</span>]</span><br>
                         <span class="cmt">Case heartbeat_timer:</span> <span class="tpl">HEARTBEAT_INSTRUCTIONS</span>
@@ -1213,27 +1245,33 @@
                     </div>
                   </div>
                 </div>
-                <div style="background: #fff3cd; border: 1px solid #e5990b; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #856404; font-weight: 500;">PromptEndsHere when (<span class="idx">@t</span> == <span class="idx">@T</span> && T.0)</div>
+                <div class="end-block">
+                  <div class="end-line"></div>
+                  <span class="end-text">PromptEndsHere when (<span class="idx">@t</span> == <span class="idx">@T</span> && <span class="idx">@T</span>.0)</span>
+                </div>
                 <div class="mark-block">
                 <div class="ctrl-block">
-                  <div class="ctrl-header">↻ ForEach i : 1 ... <span class="idx">@t</span>.substeps</div>
+                  <div class="ctrl-header">↻ ForEach <span class="idx">i</span> : 1 ... <span class="idx">@t</span>.substeps</div>
                   <div class="role-msg assistant">
                     <span class="role-badge">Role: Assistant</span>
                     <div class="role-body">
                       <div class="ctrl-block">
-                        <div class="ctrl-header">↻ ForEach tool : sys.tool_requests[<span class="idx">@t.i</span>]</div>
+                        <div class="ctrl-header">↻ ForEach <span class="idx">tool</span> : <span class="ctx">sys.tool_requests[<span class="idx">@t.i</span>]</span></div>
                         <span class="ctx">tool.id_name_and_arg</span>
                       </div>
                     </div>
                   </div>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">↻ ForEach tool : sys.tool_requests[<span class="idx">@t.i</span>]</div>
+                    <div class="ctrl-header">↻ ForEach <span class="idx">tool</span> : <span class="ctx">sys.tool_requests[<span class="idx">@t.i</span>]</span></div>
                     <div class="role-msg tool">
                       <span class="role-badge">Role: Tool</span>
                       <div class="role-body"><span class="ctx">tool.id_and_response</span></div>
                     </div>
                   </div>
-                  <div style="background: #fff3cd; border: 1px solid #e5990b; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #856404; font-weight: 500;">PromptEndsHere when (<span class="idx">@t</span> == <span class="idx">@T</span> && <span class="idx">@T</span>.I)</div>
+                  <div class="end-block">
+                    <div class="end-line"></div>
+                    <span class="end-text">PromptEndsHere when (<span class="idx">@t</span> == <span class="idx">@T</span> && <span class="idx">@T</span>.I)</span>
+                  </div>
                 </div>
                 <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">1</span></div>
                 </div>
@@ -1302,7 +1340,7 @@
                   <div class="ctrl-block">
                     <div class="ctrl-header">? If <span class="idx">@T</span> &gt; 1</div>
                     <div class="ctrl-block">
-                      <div class="ctrl-header">↻ ForEach i : <span class="idx">@T</span>-(<span class="idx">@T</span>%100) ... <span class="idx">@T</span>-1</div>
+                      <div class="ctrl-header">↻ ForEach <span class="idx">i</span> : <span class="idx">@T</span>-(<span class="idx">@T</span>%100) ... <span class="idx">@T</span>-1</div>
                       <span class="ctx">resp.action[<span class="idx">@i</span>]</span>
                     </div>
                     <div class="ctrl-block">
@@ -1398,14 +1436,14 @@
                   <span class="ctx">sys[agent].inventory[<span class="idx">@T</span>]</span>
                   <span class="cmt">// whom I see and what I know</span>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">↻ ForEach a : env.seen_actors[<span class="idx">@T</span>]</div>
+                    <div class="ctrl-header">↻ ForEach <span class="idx">a</span> : <span class="ctx">env.seen_actors[<span class="idx">@T</span>]</span></div>
                     <span class="ctx">a.name</span> <span class="ctx">a.description</span><br>
                     <span class="ctx">retrieve(sys[agent].memory[<span class="idx">@T</span>], a.name)</span>
                   </div>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">? If sys[agent].in_conversation[<span class="idx">@T</span>]</div>
+                    <div class="ctrl-header">? If <span class="ctx">sys[<span class="idx">agent</span>].in_conversation[<span class="idx">@T</span>]</span></div>
                     <div class="ctrl-block">
-                      <div class="ctrl-header">↻ ForEach convTurn : sys[agent].conversation[<span class="idx">@T</span>]</div>
+                      <div class="ctrl-header">↻ ForEach <span class="idx">convTurn</span> : <span class="ctx">sys[<span class="idx">agent</span>].conversation[<span class="idx">@T</span>]</span></div>
                       <span class="ctx">convTurn.speaker</span> <span class="ctx">convTurn.content</span>
                     </div>
                   </div>
@@ -1416,7 +1454,7 @@
                 <div class="role-body">
                   <span class="ctx">sys[agent].available_actions</span>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">? If sys[agent].in_conversation[<span class="idx">@T</span>]</div>
+                    <div class="ctrl-header">? If <span class="ctx">sys[<span class="idx">agent</span>].in_conversation[<span class="idx">@T</span>]</span></div>
                     <span class="tpl">CONTINUE_THE_CONVERSATION</span>
                   </div>
                 </div>
