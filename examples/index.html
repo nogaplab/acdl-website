@@ -426,6 +426,7 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
       line-height: 1.4;
+      color: #1f2328;
     }
 
     .rendered-output .prompt-title {
@@ -770,8 +771,8 @@
                   <div style="margin-bottom: 6px;"><span class="name-kw">Name</span> <span class="name-var">docs</span> <span class="name-assign">:=</span> <span class="fn">k_relevant_docs(<span class="ctx">env.user_input[<span class="idx">@T</span>]</span>)</span></div>
                   <div class="ctrl-block">
                     <div class="ctrl-header">↻ ForEach <span class="idx">i</span> : 1 ... <span class="name-var">docs</span>.len</div>
-                    <span class="name-var">docs</span>[i].source<br>
-                    <span class="name-var">docs</span>[i].content
+                    <span class="name-var">docs</span>[<span class="idx">i</span>].source<br>
+                    <span class="name-var">docs</span>[<span class="idx">i</span>].content
                   </div>
                   <span class="tpl">ANSWER_Q_FROM_DOCS</span><br>
                   <span class="ctx">env.user_input[<span class="idx">@T</span>]</span>
@@ -981,7 +982,7 @@
                   <div style="margin-bottom: 6px;"><span class="name-kw">Name</span> <span class="name-var">tools</span> <span class="name-assign">:=</span> <span class="fn">retrieve_tools(<span class="ctx">env.context[<span class="idx">@T</span>]</span>)</span></div>
                   <div class="ctrl-block">
                     <div class="ctrl-header">↻ ForEach <span class="idx">tool</span> : <span class="name-var">tools</span></div>
-                    <span class="name-var">tool</span>.description
+                    <span class="idx">tool</span>.description
                   </div>
                   <span class="tpl">USE_TOOLS_TO_SOLVE_TASK</span>
                 </div>

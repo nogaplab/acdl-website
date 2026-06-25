@@ -17661,7 +17661,7 @@ var ACDL = (() => {
       case "mark-block-inside-role":
         return renderMarkBlockInsideRole2(block, x, y, maxWidth);
       case "end-block":
-        return renderEndBlock2(block, x, y);
+        return renderEndBlock2(block, x, y, maxWidth);
       case "str-frag-invocation":
         return renderStrFragInvocation2(block, x, y, maxWidth);
       default:
@@ -17792,39 +17792,55 @@ var ACDL = (() => {
       height: Math.max(fontSize + padding * 2, elemResult.height)
     };
   }
-  function renderEndBlock2(block, x, y) {
+  function renderEndBlock2(block, x, y, maxWidth) {
     const elements = [];
     const lineHeight = getLineHeight(FONT_SIZES.normal);
     const fontSize = FONT_SIZES.normal;
     const textY = y + fontSize * 0.85;
     const lineY = textY - fontSize * 0.35;
     const lineStartX = x;
-    const dashLength = 80;
+    const promptW = measureText("PromptEndsHere", fontSize, true);
+    const whenW = measureText("when", fontSize, true);
+    const dashGap = 6;
+    const fixedPrefix = dashGap + promptW + 4 + whenW + 4;
+    const MAX_DASH = 80;
+    const MIN_DASH = 12;
+    const condOneLine = sliceWidth(block.condition, 0, block.condition.length, fontSize);
+    let dashLength = MAX_DASH;
+    let condMaxWidth;
+    if (maxWidth) {
+      dashLength = Math.max(MIN_DASH, Math.min(MAX_DASH, maxWidth - fixedPrefix - condOneLine));
+      const condAvail = maxWidth - (MIN_DASH + fixedPrefix);
+      if (MIN_DASH + fixedPrefix + condOneLine > maxWidth && condAvail > 40) {
+        dashLength = MIN_DASH;
+        condMaxWidth = condAvail;
+      }
+    }
     elements.push(svgLine(lineStartX, lineY, lineStartX + dashLength, lineY, {
       stroke: COLORS.textPrimary,
       strokeWidth: 1,
       strokeDasharray: "4,4"
     }));
-    let currentX = lineStartX + dashLength + 6;
+    let currentX = lineStartX + dashLength + dashGap;
     elements.push(svgText(currentX, textY, "PromptEndsHere", {
       fill: COLORS.textPrimary,
-      fontSize: FONT_SIZES.normal,
+      fontSize,
       fontWeight: "800"
     }));
-    currentX += measureText("PromptEndsHere", FONT_SIZES.normal, true) + 4;
+    currentX += promptW + 4;
     elements.push(svgText(currentX, textY, "when", {
       fill: COLORS.textPrimary,
-      fontSize: FONT_SIZES.normal,
+      fontSize,
       fontWeight: "800"
     }));
-    currentX += measureText("when", FONT_SIZES.normal, true) + 4;
-    const condResult = renderExpressionTokensSvg(block.condition, currentX, textY, FONT_SIZES.normal);
+    currentX += whenW + 4;
+    const condResult = renderExpressionTokensSvg(block.condition, currentX, textY, fontSize, condMaxWidth, y);
     elements.push(...condResult.elements);
     currentX += condResult.width;
     return {
       svg: elements.join("\n"),
       width: currentX - x,
-      height: lineHeight
+      height: condResult.height !== void 0 ? condResult.height : lineHeight
     };
   }
   function renderStrFragDefSvg(frag, x, y, maxWidth) {
@@ -18678,7 +18694,8 @@ var ACDL = (() => {
       elements,
       width: currentX - startX,
       height: void 0,
-      lastLineY: void 0
+      lastLineY: void 0,
+      lastLineWidth: currentX - startX
     };
   }
   function renderExpressionTokensWithBreaks(tokens, startX, textY, fontSize, breakPoints) {
@@ -18687,12 +18704,14 @@ var ACDL = (() => {
     let maxRenderedWidth = 0;
     const lineHeight = getLineHeight(fontSize);
     const boundaries = [0, ...breakPoints, tokens.length];
+    let lastLineWidth = 0;
     for (let k = 0; k < boundaries.length - 1; k++) {
       const lineTokens = tokens.slice(boundaries[k], boundaries[k + 1]);
       if (lineTokens.length === 0) continue;
       const lineResult = renderExpressionTokensOneLine(lineTokens, startX, currentTextY, fontSize);
       elements.push(...lineResult.elements);
       maxRenderedWidth = Math.max(maxRenderedWidth, lineResult.width);
+      lastLineWidth = lineResult.width;
       if (k < boundaries.length - 2) {
         currentTextY += lineHeight;
       }
@@ -18702,7 +18721,8 @@ var ACDL = (() => {
       elements,
       width: maxRenderedWidth,
       height: breakPoints.length > 0 ? totalHeight : void 0,
-      lastLineY: breakPoints.length > 0 ? currentTextY : void 0
+      lastLineY: breakPoints.length > 0 ? currentTextY : void 0,
+      lastLineWidth
     };
   }
   function renderControlFlowHeader(keyword, symbol, tokens, suffix, x, y, maxWidth) {
@@ -19207,7 +19227,7 @@ var ACDL = (() => {
       case "name-def":
         return renderNameDef2(block, x, y, maxWidth);
       case "end-block":
-        return renderEndBlock2(block, x, y);
+        return renderEndBlock2(block, x, y, maxWidth);
       case "roles-frag-invocation":
         return renderRolesFragInvocation2(block, x, y, maxWidth);
       default:
