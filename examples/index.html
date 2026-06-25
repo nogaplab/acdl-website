@@ -770,9 +770,9 @@
                 <div class="role-body">
                   <div style="margin-bottom: 6px;"><span class="name-kw">Name</span> <span class="name-var">docs</span> <span class="name-assign">:=</span> <span class="fn">k_relevant_docs(<span class="ctx">env.user_input[<span class="idx">@T</span>]</span>)</span></div>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">↻ ForEach <span class="idx">i</span> : 1 ... <span class="name-var">docs</span>.len</div>
-                    <span class="name-var">docs</span>[<span class="idx">i</span>].source<br>
-                    <span class="name-var">docs</span>[<span class="idx">i</span>].content
+                    <div class="ctrl-header">↻ ForEach <span class="idx">i</span> : 1 ... <span class="name-var">docs.len</span></div>
+                    <span class="name-var">docs[</span><span class="idx">i</span><span class="name-var">].source</span><br>
+                    <span class="name-var">docs[</span><span class="idx">i</span><span class="name-var">].content</span>
                   </div>
                   <span class="tpl">ANSWER_Q_FROM_DOCS</span><br>
                   <span class="ctx">env.user_input[<span class="idx">@T</span>]</span>
@@ -982,7 +982,7 @@
                   <div style="margin-bottom: 6px;"><span class="name-kw">Name</span> <span class="name-var">tools</span> <span class="name-assign">:=</span> <span class="fn">retrieve_tools(<span class="ctx">env.context[<span class="idx">@T</span>]</span>)</span></div>
                   <div class="ctrl-block">
                     <div class="ctrl-header">↻ ForEach <span class="idx">tool</span> : <span class="name-var">tools</span></div>
-                    <span class="idx">tool</span>.description
+                    <span class="idx">tool.description</span>
                   </div>
                   <span class="tpl">USE_TOOLS_TO_SOLVE_TASK</span>
                 </div>
@@ -1117,7 +1117,7 @@
                     <div class="role-body">
                       <div class="ctrl-block">
                         <div class="ctrl-header">↻ ForEach <span class="idx">tool</span> : <span class="ctx">sys.tool_requests[<span class="idx">@t.i</span>]</span></div>
-                        <span class="ctx">tool.id_name_and_args</span>
+                        <span class="idx">tool.id_name_and_args</span>
                       </div>
                     </div>
                   </div>
@@ -1125,7 +1125,7 @@
                     <div class="ctrl-header">↻ ForEach <span class="idx">tool</span> : <span class="ctx">tool_requests[<span class="idx">@t.i</span>]</span></div>
                     <div class="role-msg tool">
                       <span class="role-badge">Role: Tool</span>
-                      <div class="role-body"><span class="ctx">tool.id_and_response</span></div>
+                      <div class="role-body"><span class="idx">tool.id_and_response</span></div>
                     </div>
                   </div>
                   <div class="end-block">
@@ -1279,7 +1279,7 @@
                     <div class="role-body">
                       <div class="ctrl-block">
                         <div class="ctrl-header">↻ ForEach <span class="idx">tool</span> : <span class="ctx">sys.tool_requests[<span class="idx">@t.i</span>]</span></div>
-                        <span class="ctx">tool.id_name_and_arg</span>
+                        <span class="idx">tool.id_name_and_arg</span>
                       </div>
                     </div>
                   </div>
@@ -1287,7 +1287,7 @@
                     <div class="ctrl-header">↻ ForEach <span class="idx">tool</span> : <span class="ctx">sys.tool_requests[<span class="idx">@t.i</span>]</span></div>
                     <div class="role-msg tool">
                       <span class="role-badge">Role: Tool</span>
-                      <div class="role-body"><span class="ctx">tool.id_and_response</span></div>
+                      <div class="role-body"><span class="idx">tool.id_and_response</span></div>
                     </div>
                   </div>
                   <div class="end-block">
@@ -1469,16 +1469,16 @@
                   <span class="cmt">// whom I see and what I know</span>
                   <div class="ctrl-block">
                     <div class="ctrl-header">↻ ForEach <span class="idx">a</span> : <span class="ctx">env.seen_actors[<span class="idx">@T</span>]</span></div>
-                    <span class="ctx">a.name</span><br>
-                    <span class="ctx">a.description</span><br>
+                    <span class="idx">a.name</span><br>
+                    <span class="idx">a.description</span><br>
                     <span class="ctx">retrieve(sys[agent].memory[<span class="idx">@T</span>], a.name)</span>
                   </div>
                   <div class="ctrl-block">
                     <div class="ctrl-header">◇ If <span class="ctx">sys[<span class="idx">agent</span>].in_conversation[<span class="idx">@T</span>]</span>:</div>
                     <div class="ctrl-block">
                       <div class="ctrl-header">↻ ForEach <span class="idx">convTurn</span> : <span class="ctx">sys[<span class="idx">agent</span>].conversation[<span class="idx">@T</span>]</span></div>
-                      <span class="ctx">convTurn.speaker</span><br>
-                      <span class="ctx">convTurn.content</span>
+                      <span class="idx">convTurn.speaker</span><br>
+                      <span class="idx">convTurn.content</span>
                     </div>
                   </div>
                 </div>

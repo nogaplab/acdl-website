@@ -17718,12 +17718,13 @@ var ACDL = (() => {
     } else {
       const lineHeight = getLineHeight(fontSize);
       const nextLineY = y + lineHeight + SPACING.elementGap;
+      const valueMaxWidth = maxWidth ? maxWidth - (startX - x) : void 0;
       if (block.value.kind === "context-var") {
         valueResult = renderContextVarBlock2(block.value, 0, 0, void 0);
       } else if (block.value.kind === "function") {
         valueResult = renderFuncBlock2(block.value, 0, 0, false, void 0);
       } else if (block.value.kind === "list-comprehension") {
-        valueResult = renderListComprehension2(block.value, 0, 0, void 0);
+        valueResult = renderListComprehension2(block.value, 0, 0, valueMaxWidth);
       } else {
         valueResult = renderStrFragInvocation2(block.value, 0, 0, void 0);
       }
@@ -17736,60 +17737,71 @@ var ACDL = (() => {
       };
     }
   }
-  function renderListComprehension2(block, x, y, _maxWidth) {
+  function renderListComprehension2(block, x, y, maxWidth) {
     const elements = [];
-    let currentX = x;
     const fontSize = FONT_SIZES.normal;
     const padding = SPACING.blockPadding;
-    const textY = y + padding + fontSize * 0.85;
-    elements.push(svgText(currentX, textY, "[", {
-      fill: COLORS.textPrimary,
-      fontSize,
-      fontWeight: "700"
-    }));
+    const lineHeight = getLineHeight(fontSize);
+    const startX = x;
+    let currentX = x;
+    let currentY = y;
+    let maxRight = x;
+    const rightLimit = maxWidth ? startX + maxWidth : Infinity;
+    const baseline = () => currentY + padding + fontSize * 0.85;
+    const wrapIfNeeded = (w) => {
+      if (currentX > startX && currentX + w > rightLimit) {
+        currentY += lineHeight;
+        currentX = startX;
+      }
+    };
+    elements.push(svgText(currentX, baseline(), "[", { fill: COLORS.textPrimary, fontSize, fontWeight: "700" }));
     currentX += measureText("[", fontSize, true) + 2;
     let elemResult;
     if (block.element.kind === "context-var") {
-      elemResult = renderContextVarBlock2(block.element, currentX, y);
+      elemResult = renderContextVarBlock2(block.element, currentX, currentY);
     } else if (block.element.kind === "function") {
-      elemResult = renderFuncBlock2(block.element, currentX, y);
+      elemResult = renderFuncBlock2(block.element, currentX, currentY);
     } else {
-      elemResult = renderStrFragInvocation2(block.element, currentX, y);
+      elemResult = renderStrFragInvocation2(block.element, currentX, currentY);
     }
     elements.push(elemResult.svg);
     currentX += elemResult.width + 4;
-    elements.push(svgText(currentX, textY, "|", {
-      fill: COLORS.textPrimary,
-      fontSize,
-      fontWeight: "700"
-    }));
-    currentX += measureText("|", fontSize, true) + 4;
-    elements.push(svgText(currentX, textY, block.variable, {
-      fill: COLORS.variable,
-      fontSize,
-      fontWeight: "700"
-    }));
-    currentX += measureText(block.variable, fontSize, true) + 4;
-    elements.push(svgText(currentX, textY, "\u2208", {
-      fill: COLORS.textPrimary,
-      fontSize,
-      fontWeight: "600"
-    }));
-    currentX += measureText("\u2208", fontSize) + 4;
+    maxRight = Math.max(maxRight, currentX);
+    const pipeW = measureText("|", fontSize, true);
+    const varW = measureText(block.variable, fontSize, true);
+    wrapIfNeeded(pipeW + 4 + varW + 4);
+    elements.push(svgText(currentX, baseline(), "|", { fill: COLORS.textPrimary, fontSize, fontWeight: "700" }));
+    currentX += pipeW + 4;
+    elements.push(svgText(currentX, baseline(), block.variable, { fill: COLORS.variable, fontSize, fontWeight: "700" }));
+    currentX += varW + 4;
+    maxRight = Math.max(maxRight, currentX);
+    const inW = measureText("\u2208", fontSize);
+    const bracketW = measureText("]", fontSize, true);
     const iterTokens = iterableToTokens(block.iterable);
-    const iterResult = renderExpressionTokensSvg(iterTokens, currentX, textY, fontSize);
+    const iterOneLine = sliceWidth(iterTokens, 0, iterTokens.length, fontSize);
+    wrapIfNeeded(inW + 4 + iterOneLine + 2 + bracketW);
+    elements.push(svgText(currentX, baseline(), "\u2208", { fill: COLORS.textPrimary, fontSize, fontWeight: "600" }));
+    currentX += inW + 4;
+    const iterStartX = currentX;
+    const iterMax = maxWidth ? Math.max(60, rightLimit - iterStartX - 2 - bracketW) : void 0;
+    const iterResult = renderExpressionTokensSvg(iterTokens, iterStartX, baseline(), fontSize, iterMax, currentY);
     elements.push(...iterResult.elements);
-    currentX += iterResult.width + 2;
-    elements.push(svgText(currentX, textY, "]", {
-      fill: COLORS.textPrimary,
-      fontSize,
-      fontWeight: "700"
-    }));
-    currentX += measureText("]", fontSize, true);
+    if (iterResult.height !== void 0 && iterResult.lastLineY !== void 0) {
+      maxRight = Math.max(maxRight, iterStartX + iterResult.width);
+      currentY = iterResult.lastLineY - (padding + fontSize * 0.85);
+      currentX = iterStartX + (iterResult.lastLineWidth ?? iterResult.width);
+    } else {
+      currentX = iterStartX + iterResult.width;
+    }
+    currentX += 2;
+    elements.push(svgText(currentX, baseline(), "]", { fill: COLORS.textPrimary, fontSize, fontWeight: "700" }));
+    currentX += bracketW;
+    maxRight = Math.max(maxRight, currentX);
+    const totalHeight = currentY - y + Math.max(fontSize + padding * 2, elemResult.height);
     return {
       svg: elements.join("\n"),
-      width: currentX - x,
-      height: Math.max(fontSize + padding * 2, elemResult.height)
+      width: maxRight - x,
+      height: totalHeight
     };
   }
   function renderEndBlock2(block, x, y, maxWidth) {
@@ -18176,8 +18188,17 @@ var ACDL = (() => {
     }
     return renderExpressionTokensOneLine(tokens, startX, textY, fontSize);
   }
-  function isBreakCandidate(tok) {
-    return tok.type === "LOGIC_OP" && (tok.value === "&&" || tok.value === "||") || tok.type === "KEYWORD" && (tok.value === "and" || tok.value === "or" || tok.value === "every") || tok.type === "RANGE";
+  function isBreakCandidate(tokens, i) {
+    const tok = tokens[i];
+    if (tok.type === "LOGIC_OP") {
+      if (tok.value === "&&" || tok.value === "||") return true;
+      const next = tokens[i + 1];
+      return !!next && next.type === "LOGIC_OP" && (tok.value === "&" && next.value === "&" || tok.value === "|" && next.value === "|");
+    }
+    if (tok.type === "KEYWORD" && (tok.value === "and" || tok.value === "or" || tok.value === "every")) {
+      return true;
+    }
+    return tok.type === "RANGE";
   }
   function sliceWidth(tokens, a, b, fontSize) {
     if (b <= a) return 0;
@@ -18186,7 +18207,7 @@ var ACDL = (() => {
   function determineBreakPoints(tokens, maxWidth, fontSize) {
     const candidates = [];
     for (let i = 1; i < tokens.length; i++) {
-      if (isBreakCandidate(tokens[i])) candidates.push(i);
+      if (isBreakCandidate(tokens, i)) candidates.push(i);
     }
     if (candidates.length === 0) return [];
     const breakPoints = [];
