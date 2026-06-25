@@ -18769,35 +18769,35 @@ var ACDL = (() => {
     }));
     currentX += measureText(keyword, keywordFontSize, true) + 4;
     maxRenderedWidth = Math.max(maxRenderedWidth, currentX - x);
+    const tokenStartX = currentX;
     const tokensMaxWidth = maxWidth ? maxWidth - (currentX - x) - 8 : void 0;
-    if (maxWidth) {
-    }
     const tokenResult = renderExpressionTokensSvg(
       tokens,
-      currentX,
+      tokenStartX,
       textY,
       keywordFontSize,
       tokensMaxWidth,
       maxWidth ? y : void 0
     );
     elements.push(...tokenResult.elements);
-    if (tokenResult.height !== void 0) {
+    const multiLine = tokenResult.height !== void 0;
+    const tokensRight = tokenStartX + tokenResult.width;
+    if (multiLine) {
       currentY += tokenResult.height;
-      maxRenderedWidth = Math.max(maxRenderedWidth, tokenResult.width);
-      currentX = x + tokenResult.width;
-    } else {
-      currentX += tokenResult.width;
-      maxRenderedWidth = Math.max(maxRenderedWidth, currentX - x);
     }
+    maxRenderedWidth = Math.max(maxRenderedWidth, tokensRight - x);
+    currentX = tokensRight;
     if (suffix) {
-      const suffixY = tokenResult.lastLineY !== void 0 ? tokenResult.lastLineY : textY;
-      elements.push(svgText(currentX, suffixY, suffix, {
+      const suffixWidth = measureText(suffix, keywordFontSize, true);
+      const suffixX = multiLine ? tokensRight + 6 : tokensRight;
+      const lastLineY = tokenResult.lastLineY !== void 0 ? tokenResult.lastLineY : textY;
+      const suffixY = multiLine ? (textY + lastLineY) / 2 : textY;
+      elements.push(svgText(suffixX, suffixY, suffix, {
         fill: COLORS.textPrimary,
         fontSize: keywordFontSize,
         fontWeight: "600"
       }));
-      const suffixWidth = measureText(suffix, keywordFontSize, true);
-      currentX += suffixWidth;
+      currentX = suffixX + suffixWidth;
       maxRenderedWidth = Math.max(maxRenderedWidth, currentX - x);
     }
     const headerHeight = tokenResult.height !== void 0 ? tokenResult.height + keywordFontSize + 6 : keywordFontSize + 6;
@@ -19339,6 +19339,7 @@ var ACDL = (() => {
       totalWidth = Math.min(totalWidth, maxWidth);
     }
     const titleWidth = totalWidth - startX - startX;
+    const wrapWidth = (maxWidth && maxWidth > 0 ? maxWidth : totalWidth) - startX * 2;
     const elements = [];
     let currentY = 20;
     let lastWasPrompt = false;
@@ -19356,7 +19357,7 @@ var ACDL = (() => {
         elements.push(titleResult.svg);
         const borderStartY = currentY + titleResult.height;
         currentY += titleResult.height + SPACING.blockGap;
-        const bodyMaxWidth = titleWidth + 20;
+        const bodyMaxWidth = wrapWidth;
         const bodyResult = renderPromptBody2(block.body, startX, currentY, bodyMaxWidth);
         elements.push(svgLine(startX, borderStartY, startX, currentY + bodyResult.height, {
           stroke: COLORS.borderMedium,
@@ -19366,7 +19367,7 @@ var ACDL = (() => {
         currentY += bodyResult.height + SPACING.blockGap;
         lastWasPrompt = true;
       } else if (block.kind === "comment-block") {
-        const commentMaxWidth = titleWidth + 20;
+        const commentMaxWidth = wrapWidth;
         const commentResult = renderComment(block.text, startX, currentY, false, commentMaxWidth);
         elements.push(commentResult.svg);
         currentY += commentResult.height + SPACING.elementGap;
