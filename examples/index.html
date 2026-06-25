@@ -531,6 +531,65 @@
       font-size: 9px;
     }
 
+    /* Functions - purple like templates, compact */
+    .rendered-output .fn {
+      display: inline-flex;
+      align-items: center;
+      background: #faf5ff;
+      border: 1px solid #9333ea;
+      color: #9333ea;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-size: 9px;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    /* Mark blocks - right bracket, compact */
+    .rendered-output .mark-block {
+      position: relative;
+      padding-right: 25px;
+      margin: 4px 0;
+    }
+    .rendered-output .mark-bracket {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+    }
+    .rendered-output .mark-line {
+      width: 5px;
+      height: 100%;
+      border: 2px solid #000;
+      border-left: none;
+      border-radius: 0 2px 2px 0;
+    }
+    .rendered-output .mark-num {
+      font-size: 9px;
+      font-weight: 700;
+      color: #000;
+      margin-left: 2px;
+    }
+
+    /* Name definitions - compact */
+    .rendered-output .name-kw {
+      font-weight: 800;
+      color: #000;
+      font-size: 9px;
+    }
+    .rendered-output .name-var {
+      color: #ec4899;
+      font-weight: 600;
+      font-size: 9px;
+    }
+    .rendered-output .name-assign {
+      color: #000;
+      font-weight: 600;
+      font-size: 9px;
+    }
+
     /* Hide rendered output in cards - only shown in modal */
     .example-card-rendered {
       display: none;
@@ -682,10 +741,11 @@
               <div class="role-msg user">
                 <span class="role-badge">Role: User</span>
                 <div class="role-body">
+                  <div style="margin-bottom: 6px;"><span class="name-kw">Name</span> <span class="name-var">docs</span> <span class="name-assign">:=</span> <span class="fn">k_relevant_docs(<span class="ctx">env.user_input[<span class="idx">@T</span>]</span>)</span></div>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">↻ ForEach i : 1 ... $docs.len</div>
-                    <span class="ctx">$docs[i].source</span><br>
-                    <span class="ctx">$docs[i].content</span>
+                    <div class="ctrl-header">↻ ForEach i : 1 ... <span class="name-var">docs</span>.len</div>
+                    <span class="name-var">docs</span>[i].source<br>
+                    <span class="name-var">docs</span>[i].content
                   </div>
                   <span class="tpl">ANSWER_Q_FROM_DOCS</span><br>
                   <span class="ctx">env.user_input[<span class="idx">@T</span>]</span>
@@ -890,9 +950,10 @@
               <div class="role-msg system">
                 <span class="role-badge">Role: System</span>
                 <div class="role-body">
+                  <div style="margin-bottom: 6px;"><span class="name-kw">Name</span> <span class="name-var">tools</span> <span class="name-assign">:=</span> <span class="fn">retrieve_tools(<span class="ctx">env.context[<span class="idx">@T</span>]</span>)</span></div>
                   <div class="ctrl-block">
-                    <div class="ctrl-header">↻ ForEach tool : $tools</div>
-                    <span class="ctx">$tool.description</span>
+                    <div class="ctrl-header">↻ ForEach tool : <span class="name-var">tools</span></div>
+                    <span class="name-var">tool</span>.description
                   </div>
                   <span class="tpl">USE_TOOLS_TO_SOLVE_TASK</span>
                 </div>
@@ -976,7 +1037,8 @@
                   <span class="tpl">ENV_INFO</span>(<span class="ctx">env.working_directory[<span class="idx">@1</span>]</span>, ...)
                 </div>
               </div>
-              <div style="background: #e8f4fd; border: 1px solid #0969da; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #0969da; font-weight: 600;">Mark 2</div>
+              <div class="mark-block">
+              <div style="margin: 4px 0;"><span class="name-kw">Name</span> <span class="name-var">C</span> <span class="name-assign">:=</span> <span class="ctx">sys.last_compaction_time[<span class="idx">@T</span>]</span></div>
               <div class="ctrl-block">
                 <div class="ctrl-header">? If <span class="idx">@$C</span> &gt; 1</div>
                 <div class="role-msg user">
@@ -988,13 +1050,15 @@
                   <div class="role-body"><span class="ctx">sys.conversation_summary[<span class="idx">@$C</span>]</span></div>
                 </div>
               </div>
+              <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">2</span></div>
+              </div>
               <div class="ctrl-block">
                 <div class="ctrl-header">↻ ForEach <span class="idx">@t</span> : <span class="idx">@$C</span> ... <span class="idx">@T</span></div>
                 <div class="role-msg user">
                   <span class="role-badge">Role: User</span>
                   <div class="role-body">
                     <span class="ctx">env.user_input[<span class="idx">@t</span>]</span>
-                    <div style="background: #e8f4fd; border: 1px solid #0969da; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #0969da; font-weight: 600;">Mark 3</div>
+                    <div class="mark-block">
                     <div class="ctrl-block">
                       <div class="ctrl-header">? If <span class="idx">@T</span> == <span class="idx">@t</span></div>
                       <div class="ctrl-block">
@@ -1006,10 +1070,12 @@
                         <span class="tpl">LEAVE_PLAN_MODE_REMINDER</span>
                       </div>
                     </div>
+                    <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">3</span></div>
+                    </div>
                   </div>
                 </div>
                 <div style="background: #fff3cd; border: 1px solid #e5990b; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #856404; font-weight: 500;">PromptEndsHere when (<span class="idx">@T</span> == <span class="idx">@t</span> && <span class="idx">@T</span>.0)</div>
-                <div style="background: #e8f4fd; border: 1px solid #0969da; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #0969da; font-weight: 600;">Mark 1</div>
+                <div class="mark-block">
                 <div class="ctrl-block">
                   <div class="ctrl-header">↻ ForEach <span class="idx">@i</span> : 1 ... <span class="idx">@t</span>.substeps</div>
                   <div class="role-msg assistant">
@@ -1029,6 +1095,8 @@
                     </div>
                   </div>
                   <div style="background: #fff3cd; border: 1px solid #e5990b; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #856404; font-weight: 500;">PromptEndsHere when (<span class="idx">@T</span> == <span class="idx">@t</span> && <span class="idx">@T</span>.I)</div>
+                </div>
+                <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">1</span></div>
                 </div>
                 <div class="role-msg assistant">
                   <span class="role-badge">Role: Assistant</span>
@@ -1102,7 +1170,8 @@
                 <span class="role-badge">Role: System</span>
                 <div class="role-body"><span class="tpl">SystemPrompt</span>()</div>
               </div>
-              <div style="background: #e8f4fd; border: 1px solid #0969da; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #0969da; font-weight: 600;">Mark 2</div>
+              <div class="mark-block">
+              <div style="margin: 4px 0;"><span class="name-kw">Name</span> <span class="name-var">C</span> <span class="name-assign">:=</span> <span class="ctx">sys.last_compaction_time[<span class="idx">@T</span>]</span></div>
               <div class="ctrl-block">
                 <div class="ctrl-header">? If <span class="idx">@$C</span> &gt; 1</div>
                 <div class="role-msg user">
@@ -1117,29 +1186,35 @@
                   <div class="role-body"><span class="ctx">resp.response[<span class="idx">@$C</span>]</span></div>
                 </div>
               </div>
+              <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">2</span></div>
+              </div>
               <div class="ctrl-block">
                 <div class="ctrl-header">↻ ForEach t : <span class="idx">@$C</span> + 1 ... <span class="idx">@T</span></div>
                 <div class="role-msg user">
                   <span class="role-badge">Role: User</span>
                   <div class="role-body">
-                    <div style="background: #e8f4fd; border: 1px solid #0969da; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #0969da; font-weight: 600;">Mark 6</div>
+                    <div class="mark-block">
                     <div class="ctrl-block">
                       <div class="ctrl-header">↻ ForEach m : 1 ... sys.pending_messages[<span class="idx">@t</span>].len</div>
                       <span class="ctx">sys.pending_messages[<span class="idx">@t</span>][m].date_time</span><br>
                       <span class="ctx">sys.pending_messages[<span class="idx">@t</span>][m].message</span>
                     </div>
-                    <div style="background: #e8f4fd; border: 1px solid #0969da; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #0969da; font-weight: 600;">Mark 5</div>
+                    <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">6</span></div>
+                    </div>
+                    <div class="mark-block">
                     <div class="ctrl-block">
                       <div class="ctrl-header">⇢ Switch env.input_source[<span class="idx">@t</span>]</div>
                       <div style="padding-left: 8px; border-left: 1px dashed #adb5bd;">
-                        <span class="cmt">Case user:</span> <span style="background: #e8f4fd; border: 1px solid #0969da; border-radius: 3px; padding: 1px 4px; font-size: 7px; color: #0969da; font-weight: 600;">Mark 4</span> <span class="ctx">sys.date_time[<span class="idx">@t</span>]</span> <span class="ctx">env.user_query[<span class="idx">@t</span>]</span><br>
+                        <span class="cmt">Case user:</span> <span style="display:inline-flex;align-items:center;"><span class="ctx">sys.date_time[<span class="idx">@t</span>]</span><span style="display:inline-block;width:3px;align-self:stretch;border:2px solid #000;border-left:none;border-radius:0 2px 2px 0;margin-left:2px;"></span><span class="mark-num">4</span></span> <span class="ctx">env.user_query[<span class="idx">@t</span>]</span><br>
                         <span class="cmt">Case heartbeat_timer:</span> <span class="tpl">HEARTBEAT_INSTRUCTIONS</span>
                       </div>
+                    </div>
+                    <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">5</span></div>
                     </div>
                   </div>
                 </div>
                 <div style="background: #fff3cd; border: 1px solid #e5990b; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #856404; font-weight: 500;">PromptEndsHere when (<span class="idx">@t</span> == <span class="idx">@T</span> && T.0)</div>
-                <div style="background: #e8f4fd; border: 1px solid #0969da; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #0969da; font-weight: 600;">Mark 1</div>
+                <div class="mark-block">
                 <div class="ctrl-block">
                   <div class="ctrl-header">↻ ForEach i : 1 ... <span class="idx">@t</span>.substeps</div>
                   <div class="role-msg assistant">
@@ -1159,6 +1234,8 @@
                     </div>
                   </div>
                   <div style="background: #fff3cd; border: 1px solid #e5990b; border-radius: 3px; padding: 2px 6px; margin: 4px 0; font-size: 8px; color: #856404; font-weight: 500;">PromptEndsHere when (<span class="idx">@t</span> == <span class="idx">@T</span> && <span class="idx">@T</span>.I)</div>
+                </div>
+                <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">1</span></div>
                 </div>
                 <div class="role-msg assistant">
                   <span class="role-badge">Role: Assistant</span>
@@ -1230,7 +1307,8 @@
                     </div>
                     <div class="ctrl-block">
                       <div class="ctrl-header">? If <span class="idx">@T</span>%100 == 0</div>
-                      <span class="ctx">summarize($actions)</span>
+                      <div style="margin-bottom: 6px;"><span class="name-kw">Name</span> <span class="name-var">actions</span> <span class="name-assign">:=</span> [<span class="ctx">resp.action[<span class="idx">@t</span>]</span> | <span class="idx">t</span> ∈ <span class="idx">@T</span>-100 ... <span class="idx">@T</span>]</div>
+                      <span class="fn">summarize(<span class="name-var">actions</span>)</span>
                     </div>
                   </div>
                 </div>
