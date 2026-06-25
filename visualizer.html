@@ -18148,47 +18148,51 @@ var ACDL = (() => {
   }
   function renderExpressionTokensSvg(tokens, startX, textY, fontSize, maxWidth, startY) {
     if (maxWidth) {
-      const pass1Result = renderExpressionTokensPass1(tokens, fontSize);
-      if (pass1Result.width <= maxWidth) {
+      const fullWidth = sliceWidth(tokens, 0, tokens.length, fontSize);
+      if (fullWidth <= maxWidth) {
         return renderExpressionTokensOneLine(tokens, startX, textY, fontSize);
       }
-      const breakPoints = determineBreakPoints(pass1Result.logicalOpPositions, pass1Result.tokenWidths, maxWidth, startX);
+      const breakPoints = determineBreakPoints(tokens, maxWidth, fontSize);
+      if (breakPoints.length === 0) {
+        return renderExpressionTokensOneLine(tokens, startX, textY, fontSize);
+      }
       return renderExpressionTokensWithBreaks(tokens, startX, textY, fontSize, breakPoints);
     }
     return renderExpressionTokensOneLine(tokens, startX, textY, fontSize);
   }
-  function renderExpressionTokensPass1(tokens, fontSize) {
-    const actualRender = renderExpressionTokensOneLine(tokens, 0, 0, fontSize);
-    const totalWidth = actualRender.width;
-    const logicalOpPositions = [];
-    const tokenWidths = [];
-    for (let i = 0; i < tokens.length; i++) {
-      const tok = tokens[i];
-      if (tok.type === "LOGIC_OP" && (tok.value === "&&" || tok.value === "||")) {
-        logicalOpPositions.push(i);
-        const chunkTokens = tokens.slice(0, i + 1);
-        const chunkRender = renderExpressionTokensOneLine(chunkTokens, 0, 0, fontSize);
-        tokenWidths[i] = chunkRender.width;
-      } else if (tok.type === "KEYWORD" && (tok.value === "and" || tok.value === "or")) {
-        logicalOpPositions.push(i);
-        const chunkTokens = tokens.slice(0, i + 1);
-        const chunkRender = renderExpressionTokensOneLine(chunkTokens, 0, 0, fontSize);
-        tokenWidths[i] = chunkRender.width;
-      }
-    }
-    return { width: totalWidth, logicalOpPositions, tokenWidths };
+  function isBreakCandidate(tok) {
+    return tok.type === "LOGIC_OP" && (tok.value === "&&" || tok.value === "||") || tok.type === "KEYWORD" && (tok.value === "and" || tok.value === "or" || tok.value === "every") || tok.type === "RANGE";
   }
-  function determineBreakPoints(logicalOpPositions, tokenWidths, maxWidth, startX) {
+  function sliceWidth(tokens, a, b, fontSize) {
+    if (b <= a) return 0;
+    return renderExpressionTokensOneLine(tokens.slice(a, b), 0, 0, fontSize).width;
+  }
+  function determineBreakPoints(tokens, maxWidth, fontSize) {
+    const candidates = [];
+    for (let i = 1; i < tokens.length; i++) {
+      if (isBreakCandidate(tokens[i])) candidates.push(i);
+    }
+    if (candidates.length === 0) return [];
     const breakPoints = [];
-    let lineStartWidth = 0;
-    for (let i = logicalOpPositions.length - 1; i >= 0; i--) {
-      const opIndex = logicalOpPositions[i];
-      const widthAtOp = tokenWidths[opIndex] - lineStartWidth;
-      if (widthAtOp > maxWidth) {
-        continue;
+    let lineStart = 0;
+    let ci = 0;
+    while (ci < candidates.length) {
+      if (sliceWidth(tokens, lineStart, tokens.length, fontSize) <= maxWidth) break;
+      let chosen = -1;
+      while (ci < candidates.length && sliceWidth(tokens, lineStart, candidates[ci], fontSize) <= maxWidth) {
+        chosen = candidates[ci];
+        ci++;
       }
-      breakPoints.unshift(opIndex);
-      lineStartWidth = tokenWidths[opIndex];
+      if (chosen === -1) {
+        if (ci < candidates.length) {
+          chosen = candidates[ci];
+          ci++;
+        } else {
+          break;
+        }
+      }
+      breakPoints.push(chosen);
+      lineStart = chosen;
     }
     return breakPoints;
   }
@@ -18682,19 +18686,16 @@ var ACDL = (() => {
     let currentTextY = textY;
     let maxRenderedWidth = 0;
     const lineHeight = getLineHeight(fontSize);
-    let lineStartIdx = 0;
-    for (let i = 0; i <= breakPoints.length; i++) {
-      const lineEndIdx = i < breakPoints.length ? breakPoints[i] + 1 : tokens.length;
-      const lineTokens = tokens.slice(lineStartIdx, lineEndIdx);
-      if (lineTokens.length > 0) {
-        const lineResult = renderExpressionTokensOneLine(lineTokens, startX, currentTextY, fontSize);
-        elements.push(...lineResult.elements);
-        maxRenderedWidth = Math.max(maxRenderedWidth, lineResult.width);
-        if (i < breakPoints.length) {
-          currentTextY += lineHeight;
-        }
+    const boundaries = [0, ...breakPoints, tokens.length];
+    for (let k = 0; k < boundaries.length - 1; k++) {
+      const lineTokens = tokens.slice(boundaries[k], boundaries[k + 1]);
+      if (lineTokens.length === 0) continue;
+      const lineResult = renderExpressionTokensOneLine(lineTokens, startX, currentTextY, fontSize);
+      elements.push(...lineResult.elements);
+      maxRenderedWidth = Math.max(maxRenderedWidth, lineResult.width);
+      if (k < boundaries.length - 2) {
+        currentTextY += lineHeight;
       }
-      lineStartIdx = lineEndIdx;
     }
     const totalHeight = currentTextY - textY + fontSize;
     return {
@@ -18780,12 +18781,11 @@ var ACDL = (() => {
     }
     return iterable.tokens;
   }
-  function renderLoopHeader(indexValue, iterable, x, y) {
+  function renderLoopHeader(indexValue, iterable, x, y, maxWidth) {
     const elements = [];
     const keywordFontSize = FONT_SIZES.header + 2;
     const symbolFontSize = 11;
     const fontSize = keywordFontSize;
-    const headerHeight = keywordFontSize + 6;
     let currentX = x + 5;
     const textY = y + keywordFontSize + 1;
     elements.push(svgText(currentX, textY, "\u21BB", {
@@ -18814,9 +18814,11 @@ var ACDL = (() => {
     }));
     currentX += measureText(": ", fontSize, true);
     const iterTokens = iterableToTokens(iterable);
-    const tokenResult = renderExpressionTokensSvg(iterTokens, currentX, textY, fontSize);
+    const iterMaxWidth = maxWidth ? Math.max(60, maxWidth - (currentX - x) - 8) : void 0;
+    const tokenResult = renderExpressionTokensSvg(iterTokens, currentX, textY, fontSize, iterMaxWidth, y);
     elements.push(...tokenResult.elements);
     currentX += tokenResult.width;
+    const headerHeight = tokenResult.height !== void 0 ? tokenResult.height + 6 : keywordFontSize + 6;
     const contentWidth = currentX - x + 8;
     return {
       svg: elements.join("\n"),
@@ -18857,7 +18859,7 @@ var ACDL = (() => {
     };
   }
   function renderLoopOutsideRole2(block, x, y, maxWidth) {
-    const header = renderLoopHeader(block.index.value, block.iterable, x + 8, y);
+    const header = renderLoopHeader(block.index.value, block.iterable, x + 8, y, maxWidth);
     const childMaxWidth = maxWidth ? maxWidth - SPACING.indentSize - 8 : void 0;
     return wrapBlock2(header, block.body, x, y, {
       renderChild: (child, cx, cy, mw) => renderTopLevelBlock2(child, cx, cy, mw),
@@ -18867,7 +18869,7 @@ var ACDL = (() => {
     });
   }
   function renderLoopInsideRole2(block, x, y, maxWidthParam) {
-    const header = renderLoopHeader(block.index.value, block.iterable, x + 8, y);
+    const header = renderLoopHeader(block.index.value, block.iterable, x + 8, y, maxWidthParam);
     const childMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize - 8 : void 0;
     return wrapBlock2(header, block.body, x, y, {
       renderChild: (child, cx, cy, mw) => renderRoleBuildingBlock2(child, cx, cy, mw),
