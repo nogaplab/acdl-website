@@ -17636,7 +17636,6 @@ var ACDL = (() => {
   }
   function renderRoleBuildingBlock2(block, x, y, maxWidth) {
     if (block.kind === "conditional-block-inside-role") {
-      console.log("[renderRoleBuildingBlock] calling renderConditionalInsideRole with maxWidth:", maxWidth);
     }
     switch (block.kind) {
       case "template":
@@ -18074,17 +18073,11 @@ var ACDL = (() => {
     };
   }
   function renderRoleBody(body, startX, startY, maxWidth) {
-    console.log("[renderRoleBody]", {
-      hasMaxWidth: !!maxWidth,
-      maxWidth,
-      bodyLength: body.length
-    });
     const elements = [];
     let currentY = startY;
     let overallMaxWidth = 0;
     const contentX = startX + SPACING.rolePadding;
     const effectiveMaxWidth = maxWidth || 800;
-    console.log("[renderRoleBody] effectiveMaxWidth:", effectiveMaxWidth);
     let inlineGroup = [];
     const flushInlineGroup = () => {
       if (inlineGroup.length === 0) return;
@@ -18105,7 +18098,6 @@ var ACDL = (() => {
         inlineGroup.push(block);
       } else {
         flushInlineGroup();
-        console.log("[renderRoleBody] rendering block:", block.kind, "with effectiveMaxWidth:", effectiveMaxWidth);
         const result = renderRoleBuildingBlock2(block, contentX, currentY, effectiveMaxWidth);
         elements.push(result.svg);
         overallMaxWidth = Math.max(overallMaxWidth, result.width);
@@ -18157,19 +18149,15 @@ var ACDL = (() => {
   function renderExpressionTokensSvg(tokens, startX, textY, fontSize, maxWidth, startY) {
     if (maxWidth) {
       const pass1Result = renderExpressionTokensPass1(tokens, fontSize);
-      console.log("[PASS 1] width:", pass1Result.width, "maxWidth:", maxWidth, "exceeds:", pass1Result.width > maxWidth);
-      console.log("[PASS 1] logical operators at:", pass1Result.logicalOpPositions);
       if (pass1Result.width <= maxWidth) {
         return renderExpressionTokensOneLine(tokens, startX, textY, fontSize);
       }
       const breakPoints = determineBreakPoints(pass1Result.logicalOpPositions, pass1Result.tokenWidths, maxWidth, startX);
-      console.log("[PASS 2] break points:", breakPoints);
       return renderExpressionTokensWithBreaks(tokens, startX, textY, fontSize, breakPoints);
     }
     return renderExpressionTokensOneLine(tokens, startX, textY, fontSize);
   }
   function renderExpressionTokensPass1(tokens, fontSize) {
-    console.log("[PASS 1] tokens:", tokens.map((t) => ({ type: t.type, value: t.value })));
     const actualRender = renderExpressionTokensOneLine(tokens, 0, 0, fontSize);
     const totalWidth = actualRender.width;
     const logicalOpPositions = [];
@@ -18177,13 +18165,11 @@ var ACDL = (() => {
     for (let i = 0; i < tokens.length; i++) {
       const tok = tokens[i];
       if (tok.type === "LOGIC_OP" && (tok.value === "&&" || tok.value === "||")) {
-        console.log(`[PASS 1] Found logical operator at ${i}:`, tok.value);
         logicalOpPositions.push(i);
         const chunkTokens = tokens.slice(0, i + 1);
         const chunkRender = renderExpressionTokensOneLine(chunkTokens, 0, 0, fontSize);
         tokenWidths[i] = chunkRender.width;
       } else if (tok.type === "KEYWORD" && (tok.value === "and" || tok.value === "or")) {
-        console.log(`[PASS 1] Found logical keyword at ${i}:`, tok.value);
         logicalOpPositions.push(i);
         const chunkTokens = tokens.slice(0, i + 1);
         const chunkRender = renderExpressionTokensOneLine(chunkTokens, 0, 0, fontSize);
@@ -18198,13 +18184,11 @@ var ACDL = (() => {
     for (let i = logicalOpPositions.length - 1; i >= 0; i--) {
       const opIndex = logicalOpPositions[i];
       const widthAtOp = tokenWidths[opIndex] - lineStartWidth;
-      console.log(`[determineBreakPoints] op at ${opIndex}, width: ${widthAtOp}, maxWidth: ${maxWidth}`);
       if (widthAtOp > maxWidth) {
         continue;
       }
       breakPoints.unshift(opIndex);
       lineStartWidth = tokenWidths[opIndex];
-      console.log(`[determineBreakPoints] Breaking after token ${opIndex}`);
     }
     return breakPoints;
   }
@@ -18698,13 +18682,11 @@ var ACDL = (() => {
     let currentTextY = textY;
     let maxRenderedWidth = 0;
     const lineHeight = getLineHeight(fontSize);
-    console.log("[renderWithBreaks] Starting render with", breakPoints.length, "break points:", breakPoints);
     let lineStartIdx = 0;
     for (let i = 0; i <= breakPoints.length; i++) {
       const lineEndIdx = i < breakPoints.length ? breakPoints[i] + 1 : tokens.length;
       const lineTokens = tokens.slice(lineStartIdx, lineEndIdx);
       if (lineTokens.length > 0) {
-        console.log(`[renderWithBreaks] Rendering line ${i}: tokens ${lineStartIdx} to ${lineEndIdx - 1}`);
         const lineResult = renderExpressionTokensOneLine(lineTokens, startX, currentTextY, fontSize);
         elements.push(...lineResult.elements);
         maxRenderedWidth = Math.max(maxRenderedWidth, lineResult.width);
@@ -18747,13 +18729,6 @@ var ACDL = (() => {
     maxRenderedWidth = Math.max(maxRenderedWidth, currentX - x);
     const tokensMaxWidth = maxWidth ? maxWidth - (currentX - x) - 8 : void 0;
     if (maxWidth) {
-      console.log("[renderControlFlowHeader]", {
-        keyword,
-        maxWidth,
-        usedWidth: currentX - x,
-        tokensMaxWidth,
-        tokens: tokens.map((t) => t.value).join("")
-      });
     }
     const tokenResult = renderExpressionTokensSvg(
       tokens,

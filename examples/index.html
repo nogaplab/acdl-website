@@ -942,7 +942,9 @@
     }
     <span class="role">S</span>: {
         <span class="keyword">Name</span> tools := retrieve_tools(<span class="context">env.context</span>[<span class="context">@T</span>])
-        <span class="keyword">ForEach</span>(tool: $tools) { $tool.description }
+        <span class="keyword">ForEach</span>(tool: $tools) {
+            $tool.description
+        }
         <span class="template">USE_TOOLS_TO_SOLVE_TASK</span>
     }
 }</pre>
@@ -1027,7 +1029,9 @@
       <span class="context">env.user_input</span>[<span class="context">@t</span>]
       <span class="keyword">Mark</span> 3 {
       <span class="keyword">If</span> <span class="context">@T</span> == <span class="context">@t</span> {
-        <span class="keyword">If</span> <span class="context">sys.is_plan_mode</span>[<span class="context">@t</span>] { <span class="template">PLAN_MODE_REMINDER</span> }
+        <span class="keyword">If</span> <span class="context">sys.is_plan_mode</span>[<span class="context">@t</span>] {
+          <span class="template">PLAN_MODE_REMINDER</span>
+        }
         <span class="keyword">If</span> <span class="context">sys.is_build_mode</span>[<span class="context">@t</span>] &amp;&amp; <span class="context">sys.prev_is_plan</span>[<span class="context">@t</span>] {
           <span class="template">LEAVE_PLAN_MODE_REMINDER</span>
         }
@@ -1157,7 +1161,10 @@
   <span class="keyword">Mark</span> 2 {
   <span class="keyword">Name</span> C := <span class="context">sys.last_compaction_time</span>[<span class="context">@T</span>]
   <span class="keyword">If</span> (<span class="context">@$C</span> &gt; 1) {
-    <span class="role">U</span>: { <span class="template">THIS_IS_A_SUMMARY</span>  <span class="context">sys.conversation_summary</span>[<span class="context">@$C</span>] }
+    <span class="role">U</span>: {
+      <span class="template">THIS_IS_A_SUMMARY</span>
+      <span class="context">sys.conversation_summary</span>[<span class="context">@$C</span>]
+    }
     <span class="role">A</span>: <span class="context">resp.response</span>[<span class="context">@$C</span>]
   }
   }
@@ -1171,8 +1178,15 @@
       }
       <span class="keyword">Mark</span> 5 {
       <span class="keyword">Switch</span> <span class="context">env.input_source</span>[<span class="context">@t</span>] {
-        <span class="keyword">Case</span> user: { <span class="keyword">Mark</span> 4 { <span class="context">sys.date_time</span>[<span class="context">@t</span>] } <span class="context">env.user_query</span>[<span class="context">@t</span>] }
-        <span class="keyword">Case</span> heartbeat_timer: { <span class="template">HEARTBEAT_INSTRUCTIONS</span> }
+        <span class="keyword">Case</span> user: {
+          <span class="keyword">Mark</span> 4 {
+            <span class="context">sys.date_time</span>[<span class="context">@t</span>]
+          }
+          <span class="context">env.user_query</span>[<span class="context">@t</span>]
+        }
+        <span class="keyword">Case</span> heartbeat_timer: {
+          <span class="template">HEARTBEAT_INSTRUCTIONS</span>
+        }
       }
       }
     }
@@ -1237,8 +1251,15 @@
                     <div class="ctrl-block">
                       <div class="ctrl-header">⇢ Switch <span class="ctx">env.input_source[<span class="idx">@t</span>]</span></div>
                       <div style="padding-left: 8px; border-left: 1px dashed #adb5bd;">
-                        <span class="cmt">Case user:</span> <span style="display:inline-flex;align-items:center;"><span class="ctx">sys.date_time[<span class="idx">@t</span>]</span><span style="display:inline-block;width:3px;align-self:stretch;border:2px solid #000;border-left:none;border-radius:0 2px 2px 0;margin-left:2px;"></span><span class="mark-num">4</span></span> <span class="ctx">env.user_query[<span class="idx">@t</span>]</span><br>
-                        <span class="cmt">Case heartbeat_timer:</span> <span class="tpl">HEARTBEAT_INSTRUCTIONS</span>
+                        <div class="cmt">Case user:</div>
+                        <div style="padding-left: 10px;">
+                          <span style="display:inline-flex;align-items:center;"><span class="ctx">sys.date_time[<span class="idx">@t</span>]</span><span style="display:inline-block;width:3px;align-self:stretch;border:2px solid #000;border-left:none;border-radius:0 2px 2px 0;margin-left:2px;"></span><span class="mark-num">4</span></span><br>
+                          <span class="ctx">env.user_query[<span class="idx">@t</span>]</span>
+                        </div>
+                        <div class="cmt">Case heartbeat_timer:</div>
+                        <div style="padding-left: 10px;">
+                          <span class="tpl">HEARTBEAT_INSTRUCTIONS</span>
+                        </div>
                       </div>
                     </div>
                     <div class="mark-bracket"><div class="mark-line"></div><span class="mark-num">5</span></div>
@@ -1300,7 +1321,12 @@
           <div class="example-card-code">
             <pre><span class="template">Pokemon</span>[<span class="context">@T</span>]: {
   <span class="role">U</span>: <span class="context">env.image.HUD</span> <span class="comment">// heads up display screenshot</span>
-  <span class="role">S</span>: { <span class="template">INTRO</span> <span class="template">GOAL</span> <span class="template">CONVENTIONS</span> <span class="template">AVAILABLE_TOOLS</span> }
+  <span class="role">S</span>: {
+    <span class="template">INTRO</span>
+    <span class="template">GOAL</span>
+    <span class="template">CONVENTIONS</span>
+    <span class="template">AVAILABLE_TOOLS</span>
+  }
   <span class="role">A</span>: {
     <span class="keyword">If</span> <span class="context">@T</span>&gt;1 {
       <span class="keyword">ForEach</span>(i: range(<span class="context">@T</span>-(<span class="context">@T</span>%100),<span class="context">@T</span>-1)) {
@@ -1331,7 +1357,10 @@
               <div class="role-msg system">
                 <span class="role-badge">Role: System</span>
                 <div class="role-body">
-                  <span class="tpl">INTRO</span> <span class="tpl">GOAL</span> <span class="tpl">CONVENTIONS</span> <span class="tpl">AVAILABLE_TOOLS</span>
+                  <span class="tpl">INTRO</span><br>
+                  <span class="tpl">GOAL</span><br>
+                  <span class="tpl">CONVENTIONS</span><br>
+                  <span class="tpl">AVAILABLE_TOOLS</span>
                 </div>
               </div>
               <div class="role-msg assistant">
@@ -1399,12 +1428,14 @@
     <span class="context">sys</span>[agent].inventory[<span class="context">@T</span>]
     <span class="comment">// whom I see and what I know</span>
     <span class="keyword">ForEach</span>(a: <span class="context">env.seen_actors</span>[<span class="context">@T</span>]) {
-      a.name  a.description
+      a.name
+      a.description
       retrieve(<span class="context">sys</span>[agent].memory[<span class="context">@T</span>], a.name)
     }
     <span class="keyword">If</span> <span class="context">sys</span>[agent].in_conversation[<span class="context">@T</span>] {
       <span class="keyword">ForEach</span>(convTurn: <span class="context">sys</span>[agent].conversation[<span class="context">@T</span>]) {
-        convTurn.speaker  convTurn.content
+        convTurn.speaker
+        convTurn.content
       }
     }
   }
@@ -1437,14 +1468,16 @@
                   <span class="cmt">// whom I see and what I know</span>
                   <div class="ctrl-block">
                     <div class="ctrl-header">↻ ForEach <span class="idx">a</span> : <span class="ctx">env.seen_actors[<span class="idx">@T</span>]</span></div>
-                    <span class="ctx">a.name</span> <span class="ctx">a.description</span><br>
+                    <span class="ctx">a.name</span><br>
+                    <span class="ctx">a.description</span><br>
                     <span class="ctx">retrieve(sys[agent].memory[<span class="idx">@T</span>], a.name)</span>
                   </div>
                   <div class="ctrl-block">
                     <div class="ctrl-header">◇ If <span class="ctx">sys[<span class="idx">agent</span>].in_conversation[<span class="idx">@T</span>]</span>:</div>
                     <div class="ctrl-block">
                       <div class="ctrl-header">↻ ForEach <span class="idx">convTurn</span> : <span class="ctx">sys[<span class="idx">agent</span>].conversation[<span class="idx">@T</span>]</span></div>
-                      <span class="ctx">convTurn.speaker</span> <span class="ctx">convTurn.content</span>
+                      <span class="ctx">convTurn.speaker</span><br>
+                      <span class="ctx">convTurn.content</span>
                     </div>
                   </div>
                 </div>
