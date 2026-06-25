@@ -2044,8 +2044,8 @@ body {
           <option value="fig1_right">ReAct with Tool-RAG</option>
         </optgroup>
         <optgroup label="Real-World Systems">
-          <option value="opencode">OpenCode (Claude Code-like)</option>
-          <option value="openclaw">OpenClaw (Letta-like)</option>
+          <option value="opencode">OpenCode</option>
+          <option value="openclaw">OpenClaw</option>
           <option value="pokemon">Pokemon Agent</option>
           <option value="multiagent">Multi-Agent Simulation</option>
           <option value="mintagent">MintAgent</option>
@@ -16801,7 +16801,8 @@ var ACDL = (() => {
 
   // src/renderPromptSvg.ts
   function controlHeaderBanner(headerX, y, rightX, height) {
-    return svgRect(headerX, y, Math.max(0, rightX - headerX), height, {
+    const RIGHT_INSET = 4;
+    return svgRect(headerX, y, Math.max(0, rightX - headerX - RIGHT_INSET), height, {
       fill: COLORS.controlHeaderBg,
       rx: 2
     });
