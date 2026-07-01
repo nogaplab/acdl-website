@@ -16800,9 +16800,10 @@ var ACDL = (() => {
   }
 
   // src/renderPromptSvg.ts
-  function controlHeaderBanner(headerX, y, rightX, height) {
-    const RIGHT_INSET = 4;
-    return svgRect(headerX, y, Math.max(0, rightX - headerX - RIGHT_INSET), height, {
+  function controlHeaderBanner(headerX, y, rightX, height, headerWidth) {
+    const RIGHT_INSET = 20;
+    const width = Math.max(headerWidth, rightX - headerX - RIGHT_INSET);
+    return svgRect(headerX, y, Math.max(0, width), height, {
       fill: COLORS.controlHeaderBg,
       rx: 2
     });
@@ -18891,7 +18892,7 @@ var ACDL = (() => {
     }));
     let svg = elements.join("\n");
     if (opts.drawBanner) {
-      const bannerSvg = controlHeaderBanner(headerX, y, contentRight, bannerHeight);
+      const bannerSvg = controlHeaderBanner(headerX, y, contentRight, bannerHeight, header.width);
       svg = bannerSvg + "\n" + svg;
     }
     return {
@@ -18929,7 +18930,7 @@ var ACDL = (() => {
     let contentRight = 0;
     const childMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize - 8 : void 0;
     const ifHeader = renderControlFlowHeader("If", "\u25C7", block.Ifcondition, ":", headerX, currentY, maxWidthParam);
-    banners.push({ y: currentY, height: ifHeader.height });
+    banners.push({ y: currentY, height: ifHeader.height, hw: ifHeader.width });
     elements.push(ifHeader.svg);
     contentRight = Math.max(contentRight, headerX + ifHeader.width);
     currentY += ifHeader.height + 5;
@@ -18941,7 +18942,7 @@ var ACDL = (() => {
     }
     for (let i = 0; i < block.elseif.length; i++) {
       const elseifHeader = renderControlFlowHeader("ElseIf", "\u25C7", block.elseif[i], ":", headerX, currentY, maxWidthParam);
-      banners.push({ y: currentY, height: elseifHeader.height });
+      banners.push({ y: currentY, height: elseifHeader.height, hw: elseifHeader.width });
       elements.push(elseifHeader.svg);
       contentRight = Math.max(contentRight, headerX + elseifHeader.width);
       currentY += elseifHeader.height + 5;
@@ -18954,7 +18955,7 @@ var ACDL = (() => {
     }
     if (block.elseBody && block.elseBody.length > 0) {
       const elseHeader = renderControlFlowHeader("Else", "\u25C7", [], ":", headerX, currentY, maxWidthParam);
-      banners.push({ y: currentY, height: elseHeader.height });
+      banners.push({ y: currentY, height: elseHeader.height, hw: elseHeader.width });
       elements.push(elseHeader.svg);
       contentRight = Math.max(contentRight, headerX + elseHeader.width);
       currentY += elseHeader.height + 5;
@@ -18970,7 +18971,7 @@ var ACDL = (() => {
       stroke: COLORS.controlBorder,
       strokeWidth: 1
     }));
-    const bannerSvg = banners.map((b) => controlHeaderBanner(headerX, b.y, contentRight, b.height)).join("\n");
+    const bannerSvg = banners.map((b) => controlHeaderBanner(headerX, b.y, contentRight, b.height, b.hw)).join("\n");
     return {
       svg: bannerSvg + "\n" + elements.join("\n"),
       width: contentRight - x,
@@ -18985,7 +18986,7 @@ var ACDL = (() => {
     const childX = x + SPACING.indentSize + 8;
     let contentRight = 0;
     const ifHeader = renderControlFlowHeader("If", "\u25C7", block.Ifcondition, ":", headerX, currentY, maxWidthParam);
-    banners.push({ y: currentY, height: ifHeader.height });
+    banners.push({ y: currentY, height: ifHeader.height, hw: ifHeader.width });
     elements.push(ifHeader.svg);
     contentRight = Math.max(contentRight, headerX + ifHeader.width);
     currentY += ifHeader.height + 5;
@@ -18998,7 +18999,7 @@ var ACDL = (() => {
     }
     for (let i = 0; i < block.elseif.length; i++) {
       const elseifHeader = renderControlFlowHeader("ElseIf", "\u25C7", block.elseif[i], ":", headerX, currentY, maxWidthParam);
-      banners.push({ y: currentY, height: elseifHeader.height });
+      banners.push({ y: currentY, height: elseifHeader.height, hw: elseifHeader.width });
       elements.push(elseifHeader.svg);
       contentRight = Math.max(contentRight, headerX + elseifHeader.width);
       currentY += elseifHeader.height + 5;
@@ -19011,7 +19012,7 @@ var ACDL = (() => {
     }
     if (block.elseBody && block.elseBody.length > 0) {
       const elseHeader = renderControlFlowHeader("Else", "\u25C7", [], ":", headerX, currentY, maxWidthParam);
-      banners.push({ y: currentY, height: elseHeader.height });
+      banners.push({ y: currentY, height: elseHeader.height, hw: elseHeader.width });
       elements.push(elseHeader.svg);
       contentRight = Math.max(contentRight, headerX + elseHeader.width);
       currentY += elseHeader.height + 5;
@@ -19027,7 +19028,7 @@ var ACDL = (() => {
       stroke: COLORS.controlBorder,
       strokeWidth: 1
     }));
-    const bannerSvg = banners.map((b) => controlHeaderBanner(headerX, b.y, contentRight, b.height)).join("\n");
+    const bannerSvg = banners.map((b) => controlHeaderBanner(headerX, b.y, contentRight, b.height, b.hw)).join("\n");
     return {
       svg: bannerSvg + "\n" + elements.join("\n"),
       width: contentRight - x,
@@ -19049,14 +19050,14 @@ var ACDL = (() => {
       { type: "SYMBOL", value: ")" }
     ];
     const switchHeader = renderControlFlowHeader("Switch", "\u2387", switchTokens, ":", switchHeaderX, currentY, maxWidthParam);
-    const switchBanner = { y: currentY, height: switchHeader.height };
+    const switchBanner = { y: currentY, height: switchHeader.height, hw: switchHeader.width };
     elements.push(switchHeader.svg);
     contentRight = Math.max(contentRight, switchHeaderX + switchHeader.width);
     currentY += switchHeader.height + 4;
     const renderCase = (match, keyword, body) => {
       const caseMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize : void 0;
       const caseHeader = renderControlFlowHeader(keyword, "", match, keyword === "Default" ? ":" : "", caseHeaderX, currentY, caseMaxWidth);
-      const banner = { y: currentY, height: caseHeader.height };
+      const banner = { y: currentY, height: caseHeader.height, hw: caseHeader.width };
       elements.push(caseHeader.svg);
       let caseRight = caseHeaderX + caseHeader.width;
       currentY += caseHeader.height + 5;
@@ -19081,8 +19082,8 @@ var ACDL = (() => {
       strokeWidth: 1
     }));
     const bannerSvg = [
-      controlHeaderBanner(switchHeaderX, switchBanner.y, contentRight, switchBanner.height),
-      ...caseBanners.map((b) => controlHeaderBanner(caseHeaderX, b.y, b.right, b.height))
+      controlHeaderBanner(switchHeaderX, switchBanner.y, contentRight, switchBanner.height, switchBanner.hw),
+      ...caseBanners.map((b) => controlHeaderBanner(caseHeaderX, b.y, b.right, b.height, b.hw))
     ].join("\n");
     return {
       svg: bannerSvg + "\n" + elements.join("\n"),
@@ -19104,14 +19105,14 @@ var ACDL = (() => {
       { type: "SYMBOL", value: ")" }
     ];
     const switchHeader = renderControlFlowHeader("Switch", "\u2387", switchTokens, ":", switchHeaderX, currentY, maxWidthParam);
-    const switchBanner = { y: currentY, height: switchHeader.height };
+    const switchBanner = { y: currentY, height: switchHeader.height, hw: switchHeader.width };
     elements.push(switchHeader.svg);
     contentRight = Math.max(contentRight, switchHeaderX + switchHeader.width);
     currentY += switchHeader.height + 4;
     const renderCase = (match, keyword, body) => {
       const caseMaxWidth = maxWidthParam ? maxWidthParam - SPACING.indentSize : void 0;
       const caseHeader = renderControlFlowHeader(keyword, "", match, keyword === "Default" ? ":" : "", caseHeaderX, currentY, caseMaxWidth);
-      const banner = { y: currentY, height: caseHeader.height };
+      const banner = { y: currentY, height: caseHeader.height, hw: caseHeader.width };
       elements.push(caseHeader.svg);
       let caseRight = caseHeaderX + caseHeader.width;
       currentY += caseHeader.height + 5;
@@ -19137,8 +19138,8 @@ var ACDL = (() => {
       strokeWidth: 1
     }));
     const bannerSvg = [
-      controlHeaderBanner(switchHeaderX, switchBanner.y, contentRight, switchBanner.height),
-      ...caseBanners.map((b) => controlHeaderBanner(caseHeaderX, b.y, b.right, b.height))
+      controlHeaderBanner(switchHeaderX, switchBanner.y, contentRight, switchBanner.height, switchBanner.hw),
+      ...caseBanners.map((b) => controlHeaderBanner(caseHeaderX, b.y, b.right, b.height, b.hw))
     ].join("\n");
     return {
       svg: bannerSvg + "\n" + elements.join("\n"),
