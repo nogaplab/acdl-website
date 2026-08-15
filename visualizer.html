@@ -1018,6 +1018,30 @@ body {
   border-left: 1px solid var(--control-border);
 }
 
+/* An If/ElseIf/Else chain is one unit: its branches stack, never flow side by
+   side, even when the role body they sit in has room for both. */
+.conditional-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 1 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.conditional-chain > * {
+  max-width: 100%;
+}
+
+/* Keep the chain's outer spacing identical to a single block's */
+.conditional-chain > :first-child {
+  margin-top: 0;
+}
+
+.conditional-chain > :last-child {
+  margin-bottom: 0;
+}
+
 .conditional-section {
   position: relative;
   margin: 1px 0;
@@ -2246,6 +2270,25 @@ var ACDL = (() => {
     "!",
     "_"
   ]);
+  var INVISIBLE = new Set(
+    [
+      8203,
+      // zero-width space
+      8204,
+      // zero-width non-joiner
+      8205,
+      // zero-width joiner
+      8288,
+      // word joiner
+      65279,
+      // BOM / zero-width no-break space
+      173
+      // soft hyphen
+    ].map((code) => String.fromCharCode(code))
+  );
+  function isWhitespace(ch) {
+    return /\s/.test(ch) || INVISIBLE.has(ch);
+  }
   var Scanner = class {
     constructor(input) {
       __publicField(this, "pos", 0);
@@ -2309,7 +2352,7 @@ var ACDL = (() => {
       if (this.isIdentStart(ch)) {
         return this.readIdentifier();
       }
-      throw this.error(`Unexpected character '${ch}'`);
+      throw this.error(`Unexpected character '${ch}' (U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")})`);
     }
     /* ───────────── token readers ───────────── */
     readComment() {
@@ -2317,7 +2360,7 @@ var ACDL = (() => {
       this.advance();
       this.advance();
       let value = "";
-      while (!this.isEOF() && this.peek() !== "\n" && this.peek() !== "}") {
+      while (!this.isEOF() && this.peek() !== "\n") {
         value += this.advance();
       }
       return {
@@ -2427,14 +2470,9 @@ var ACDL = (() => {
     }
     skipWhitespace() {
       let skipped = false;
-      while (!this.isEOF()) {
-        const ch = this.peek();
-        if (ch === " " || ch === "	" || ch === "\n" || ch === "\r") {
-          this.advance();
-          skipped = true;
-        } else {
-          break;
-        }
+      while (!this.isEOF() && isWhitespace(this.peek())) {
+        this.advance();
+        skipped = true;
       }
       return skipped;
     }
@@ -2609,6 +2647,20 @@ var ACDL = (() => {
     }
     peekNext() {
       return this.tokens[this.pos + 1];
+    }
+    /**
+     * The next token that is not a comment, without consuming anything.
+     * Comments are legal on any line, so structural lookahead (Case/Default/Else)
+     * must see past them rather than treating one as the end of a construct.
+     */
+    peekSkippingComments() {
+      let i = this.pos;
+      while (this.tokens[i] && this.tokens[i].type === "COMMENT") i++;
+      return this.tokens[i];
+    }
+    /** Consume any run of comment tokens at the current position. */
+    skipComments() {
+      while (this.peek() && this.peek().type === "COMMENT") this.consume("COMMENT");
     }
     /**
      * Consumes a token of a specific type and/or value.
@@ -3401,7 +3453,8 @@ var ACDL = (() => {
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
-      while (this.peek().type === "KEYWORD" && (this.peek().value === "ElseIf" || this.peek().value === "Else")) {
+      while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
+        this.skipComments();
         const type = this.consume().value;
         if (type === "ElseIf") {
           const eiCondTokens = [];
@@ -3474,7 +3527,8 @@ var ACDL = (() => {
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
-      while (this.peek().type === "KEYWORD" && (this.peek().value === "ElseIf" || this.peek().value === "Else")) {
+      while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
+        this.skipComments();
         const type = this.consume().value;
         if (type === "ElseIf") {
           const eiCondTokens = [];
@@ -3519,7 +3573,9 @@ var ACDL = (() => {
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
-      while (this.peek().value !== "}") {
+      while (true) {
+        this.skipComments();
+        if (this.peek().value === "}") break;
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
           const matchTokens = [];
@@ -3561,7 +3617,9 @@ var ACDL = (() => {
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
-      while (this.peek().value !== "}") {
+      while (true) {
+        this.skipComments();
+        if (this.peek().value === "}") break;
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
           const matchTokens = [];
@@ -4336,7 +4394,7 @@ var ACDL = (() => {
       const elseHeader = `<span class="keyword">Else</span>:`;
       result += wrapBlock("conditional-block-inside-role", elseHeader, renderBody(block.elseBody));
     }
-    return result;
+    return `<div class="conditional-chain">${result}</div>`;
   }
   function renderConditionalOutsideRole(block) {
     const renderBody = (body) => body.map(
@@ -39418,10 +39476,7 @@ var ACDLEditor = (() => {
   function tokenize(stream, state) {
     if (stream.eatSpace()) return null;
     if (stream.match("//")) {
-      while (!stream.eol()) {
-        if (stream.peek() === "}") break;
-        stream.next();
-      }
+      stream.skipToEnd();
       state.afterDot = false;
       return "comment";
     }
@@ -40223,6 +40278,25 @@ var ACDLEditor = (() => {
     "!",
     "_"
   ]);
+  var INVISIBLE = new Set(
+    [
+      8203,
+      // zero-width space
+      8204,
+      // zero-width non-joiner
+      8205,
+      // zero-width joiner
+      8288,
+      // word joiner
+      65279,
+      // BOM / zero-width no-break space
+      173
+      // soft hyphen
+    ].map((code) => String.fromCharCode(code))
+  );
+  function isWhitespace(ch) {
+    return /\s/.test(ch) || INVISIBLE.has(ch);
+  }
   var Scanner = class {
     constructor(input) {
       __publicField(this, "pos", 0);
@@ -40286,7 +40360,7 @@ var ACDLEditor = (() => {
       if (this.isIdentStart(ch)) {
         return this.readIdentifier();
       }
-      throw this.error(`Unexpected character '${ch}'`);
+      throw this.error(`Unexpected character '${ch}' (U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")})`);
     }
     /* ───────────── token readers ───────────── */
     readComment() {
@@ -40294,7 +40368,7 @@ var ACDLEditor = (() => {
       this.advance();
       this.advance();
       let value = "";
-      while (!this.isEOF() && this.peek() !== "\n" && this.peek() !== "}") {
+      while (!this.isEOF() && this.peek() !== "\n") {
         value += this.advance();
       }
       return {
@@ -40404,14 +40478,9 @@ var ACDLEditor = (() => {
     }
     skipWhitespace() {
       let skipped = false;
-      while (!this.isEOF()) {
-        const ch = this.peek();
-        if (ch === " " || ch === "	" || ch === "\n" || ch === "\r") {
-          this.advance();
-          skipped = true;
-        } else {
-          break;
-        }
+      while (!this.isEOF() && isWhitespace(this.peek())) {
+        this.advance();
+        skipped = true;
       }
       return skipped;
     }
@@ -40586,6 +40655,20 @@ var ACDLEditor = (() => {
     }
     peekNext() {
       return this.tokens[this.pos + 1];
+    }
+    /**
+     * The next token that is not a comment, without consuming anything.
+     * Comments are legal on any line, so structural lookahead (Case/Default/Else)
+     * must see past them rather than treating one as the end of a construct.
+     */
+    peekSkippingComments() {
+      let i = this.pos;
+      while (this.tokens[i] && this.tokens[i].type === "COMMENT") i++;
+      return this.tokens[i];
+    }
+    /** Consume any run of comment tokens at the current position. */
+    skipComments() {
+      while (this.peek() && this.peek().type === "COMMENT") this.consume("COMMENT");
     }
     /**
      * Consumes a token of a specific type and/or value.
@@ -41378,7 +41461,8 @@ var ACDLEditor = (() => {
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
-      while (this.peek().type === "KEYWORD" && (this.peek().value === "ElseIf" || this.peek().value === "Else")) {
+      while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
+        this.skipComments();
         const type = this.consume().value;
         if (type === "ElseIf") {
           const eiCondTokens = [];
@@ -41451,7 +41535,8 @@ var ACDLEditor = (() => {
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
-      while (this.peek().type === "KEYWORD" && (this.peek().value === "ElseIf" || this.peek().value === "Else")) {
+      while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
+        this.skipComments();
         const type = this.consume().value;
         if (type === "ElseIf") {
           const eiCondTokens = [];
@@ -41496,7 +41581,9 @@ var ACDLEditor = (() => {
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
-      while (this.peek().value !== "}") {
+      while (true) {
+        this.skipComments();
+        if (this.peek().value === "}") break;
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
           const matchTokens = [];
@@ -41538,7 +41625,9 @@ var ACDLEditor = (() => {
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
-      while (this.peek().value !== "}") {
+      while (true) {
+        this.skipComments();
+        if (this.peek().value === "}") break;
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
           const matchTokens = [];

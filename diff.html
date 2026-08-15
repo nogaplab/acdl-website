@@ -20059,10 +20059,7 @@ var ACDLEditor = (() => {
   function tokenize(stream, state) {
     if (stream.eatSpace()) return null;
     if (stream.match("//")) {
-      while (!stream.eol()) {
-        if (stream.peek() === "}") break;
-        stream.next();
-      }
+      stream.skipToEnd();
       state.afterDot = false;
       return "comment";
     }
@@ -20864,6 +20861,25 @@ var ACDLEditor = (() => {
     "!",
     "_"
   ]);
+  var INVISIBLE = new Set(
+    [
+      8203,
+      // zero-width space
+      8204,
+      // zero-width non-joiner
+      8205,
+      // zero-width joiner
+      8288,
+      // word joiner
+      65279,
+      // BOM / zero-width no-break space
+      173
+      // soft hyphen
+    ].map((code) => String.fromCharCode(code))
+  );
+  function isWhitespace(ch) {
+    return /\s/.test(ch) || INVISIBLE.has(ch);
+  }
   var Scanner = class {
     constructor(input) {
       __publicField(this, "pos", 0);
@@ -20927,7 +20943,7 @@ var ACDLEditor = (() => {
       if (this.isIdentStart(ch)) {
         return this.readIdentifier();
       }
-      throw this.error(`Unexpected character '${ch}'`);
+      throw this.error(`Unexpected character '${ch}' (U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")})`);
     }
     /* ───────────── token readers ───────────── */
     readComment() {
@@ -20935,7 +20951,7 @@ var ACDLEditor = (() => {
       this.advance();
       this.advance();
       let value = "";
-      while (!this.isEOF() && this.peek() !== "\n" && this.peek() !== "}") {
+      while (!this.isEOF() && this.peek() !== "\n") {
         value += this.advance();
       }
       return {
@@ -21045,14 +21061,9 @@ var ACDLEditor = (() => {
     }
     skipWhitespace() {
       let skipped = false;
-      while (!this.isEOF()) {
-        const ch = this.peek();
-        if (ch === " " || ch === "	" || ch === "\n" || ch === "\r") {
-          this.advance();
-          skipped = true;
-        } else {
-          break;
-        }
+      while (!this.isEOF() && isWhitespace(this.peek())) {
+        this.advance();
+        skipped = true;
       }
       return skipped;
     }
@@ -21227,6 +21238,20 @@ var ACDLEditor = (() => {
     }
     peekNext() {
       return this.tokens[this.pos + 1];
+    }
+    /**
+     * The next token that is not a comment, without consuming anything.
+     * Comments are legal on any line, so structural lookahead (Case/Default/Else)
+     * must see past them rather than treating one as the end of a construct.
+     */
+    peekSkippingComments() {
+      let i = this.pos;
+      while (this.tokens[i] && this.tokens[i].type === "COMMENT") i++;
+      return this.tokens[i];
+    }
+    /** Consume any run of comment tokens at the current position. */
+    skipComments() {
+      while (this.peek() && this.peek().type === "COMMENT") this.consume("COMMENT");
     }
     /**
      * Consumes a token of a specific type and/or value.
@@ -22019,7 +22044,8 @@ var ACDLEditor = (() => {
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
-      while (this.peek().type === "KEYWORD" && (this.peek().value === "ElseIf" || this.peek().value === "Else")) {
+      while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
+        this.skipComments();
         const type = this.consume().value;
         if (type === "ElseIf") {
           const eiCondTokens = [];
@@ -22092,7 +22118,8 @@ var ACDLEditor = (() => {
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
-      while (this.peek().type === "KEYWORD" && (this.peek().value === "ElseIf" || this.peek().value === "Else")) {
+      while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
+        this.skipComments();
         const type = this.consume().value;
         if (type === "ElseIf") {
           const eiCondTokens = [];
@@ -22137,7 +22164,9 @@ var ACDLEditor = (() => {
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
-      while (this.peek().value !== "}") {
+      while (true) {
+        this.skipComments();
+        if (this.peek().value === "}") break;
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
           const matchTokens = [];
@@ -22179,7 +22208,9 @@ var ACDLEditor = (() => {
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
-      while (this.peek().value !== "}") {
+      while (true) {
+        this.skipComments();
+        if (this.peek().value === "}") break;
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
           const matchTokens = [];
@@ -22396,6 +22427,25 @@ var ACDLDiff = (() => {
     "!",
     "_"
   ]);
+  var INVISIBLE = new Set(
+    [
+      8203,
+      // zero-width space
+      8204,
+      // zero-width non-joiner
+      8205,
+      // zero-width joiner
+      8288,
+      // word joiner
+      65279,
+      // BOM / zero-width no-break space
+      173
+      // soft hyphen
+    ].map((code) => String.fromCharCode(code))
+  );
+  function isWhitespace(ch) {
+    return /\s/.test(ch) || INVISIBLE.has(ch);
+  }
   var Scanner = class {
     constructor(input) {
       __publicField(this, "pos", 0);
@@ -22459,7 +22509,7 @@ var ACDLDiff = (() => {
       if (this.isIdentStart(ch)) {
         return this.readIdentifier();
       }
-      throw this.error(`Unexpected character '${ch}'`);
+      throw this.error(`Unexpected character '${ch}' (U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")})`);
     }
     /* ───────────── token readers ───────────── */
     readComment() {
@@ -22467,7 +22517,7 @@ var ACDLDiff = (() => {
       this.advance();
       this.advance();
       let value = "";
-      while (!this.isEOF() && this.peek() !== "\n" && this.peek() !== "}") {
+      while (!this.isEOF() && this.peek() !== "\n") {
         value += this.advance();
       }
       return {
@@ -22577,14 +22627,9 @@ var ACDLDiff = (() => {
     }
     skipWhitespace() {
       let skipped = false;
-      while (!this.isEOF()) {
-        const ch = this.peek();
-        if (ch === " " || ch === "	" || ch === "\n" || ch === "\r") {
-          this.advance();
-          skipped = true;
-        } else {
-          break;
-        }
+      while (!this.isEOF() && isWhitespace(this.peek())) {
+        this.advance();
+        skipped = true;
       }
       return skipped;
     }
@@ -22759,6 +22804,20 @@ var ACDLDiff = (() => {
     }
     peekNext() {
       return this.tokens[this.pos + 1];
+    }
+    /**
+     * The next token that is not a comment, without consuming anything.
+     * Comments are legal on any line, so structural lookahead (Case/Default/Else)
+     * must see past them rather than treating one as the end of a construct.
+     */
+    peekSkippingComments() {
+      let i = this.pos;
+      while (this.tokens[i] && this.tokens[i].type === "COMMENT") i++;
+      return this.tokens[i];
+    }
+    /** Consume any run of comment tokens at the current position. */
+    skipComments() {
+      while (this.peek() && this.peek().type === "COMMENT") this.consume("COMMENT");
     }
     /**
      * Consumes a token of a specific type and/or value.
@@ -23551,7 +23610,8 @@ var ACDLDiff = (() => {
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
-      while (this.peek().type === "KEYWORD" && (this.peek().value === "ElseIf" || this.peek().value === "Else")) {
+      while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
+        this.skipComments();
         const type = this.consume().value;
         if (type === "ElseIf") {
           const eiCondTokens = [];
@@ -23624,7 +23684,8 @@ var ACDLDiff = (() => {
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
-      while (this.peek().type === "KEYWORD" && (this.peek().value === "ElseIf" || this.peek().value === "Else")) {
+      while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
+        this.skipComments();
         const type = this.consume().value;
         if (type === "ElseIf") {
           const eiCondTokens = [];
@@ -23669,7 +23730,9 @@ var ACDLDiff = (() => {
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
-      while (this.peek().value !== "}") {
+      while (true) {
+        this.skipComments();
+        if (this.peek().value === "}") break;
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
           const matchTokens = [];
@@ -23711,7 +23774,9 @@ var ACDLDiff = (() => {
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
-      while (this.peek().value !== "}") {
+      while (true) {
+        this.skipComments();
+        if (this.peek().value === "}") break;
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
           const matchTokens = [];
@@ -24191,7 +24256,7 @@ ${summary}
 })();
 </script>
   <script>
-    const PRESETS = [{"key":"react","label":"ReAct: v1 → v2","a":"React1[@T]: {\r\n    S: {\r\n        TASK_DESC\r\n        AVAILABLE_TOOLS\r\n    }\r\n    U: env.user_input[@1]\r\n    ForEach(t: range(2,@T)) {\r\n      A: {\r\n        resp.tool_reasoning[@t]\r\n        sys.tool_call[@t].tool_called\r\n      }\r\n      U: sys.tool_call[@t].tool_response\r\n    }\r\n}","b":"React2[@T.I]: {\r\n    S: INSTRUCTIONS_AND_TOOLS\r\n    // History\r\n    Mark 1 {\r\n    // Chat loop (Main loop)\r\n    ForEach(t: range(1,@T-1)) {\r\n        U: env.user_question[@t]\r\n        Mark 2 {\r\n        // React loop (internal loop)\r\n        ForEach(i: range(1,@t.substeps)) {\r\n          A: sys.tool_used[@t.i].name_and_args\r\n          T: sys.tool_used[@t.i].tool_response\r\n        }}\r\n        A: resp.response // final response after ReAct loop\r\n    }\r\n  }\r\n    // Last turn\r\n    U: env.user_question[@T]\r\n    ForEach(i: range(1,@T.substeps)) {\r\n      A: sys.tool_used[@T.i].name_and_args\r\n      T: sys.tool_used[@T.i].tool_response\r\n    }\r\n}"},{"key":"mint","label":"MintAgent: opt1 → opt2","a":"Var1[@T]: {\r\n    U: {\r\n        TASK_DESCRIPTION(sys.max_total_steps)\r\n        env.tool_desc\r\n        env.in_context_example\r\n        env.task_prompt\r\n    } \r\n\r\n    // only the result of the previous turns or the new query in them\r\n    ForEach(@t: range(1, @T)){\r\n        A: {\r\n                resp.solution_reasoning[@t]\r\n                resp.solution[@t]\r\n        }\r\n        U: env.feedback[@t] // response if the answer was right or wrong, remaining tries if failed\r\n    }\r\n\r\n    // all the tool calls and reponses from the current turn\r\n    ForEach(i: range(1, @T.substeps)){\r\n        A: sys.tool_used[@T.i]\r\n        T: sys.tool_used[@T.i].tool_response\r\n    }\r\n}","b":"Var2[@T]: {\r\n    U: {\r\n        TASK_DESCRIPTION(sys.max_total_steps)\r\n        env.tool_desc\r\n        env.in_context_example\r\n        env.task_prompt\r\n    } \r\n    \r\n    // all the tool calls and reponses from all turns\r\n    ForEach(@t: range(1,@T)) {\r\n        A: { \r\n            ForEach(i: range(1, @t.substeps)){\r\n                sys.tool_used[@t.i]\r\n                sys.tool_used[@t.i].tool_response\r\n            }\r\n        }\r\n        A: {\r\n            resp.solution_reasoning[@t]\r\n            resp.solution[@t]\r\n        }\r\n        U: env.feedback[@t] // response if the answer was right or wrong, remaining tries if failed\r\n    } \r\n    \r\n    ForEach(i: range(1, @T.substeps)) {\r\n        A: {\r\n            sys.tool_used[@T.i]\r\n            sys.tool_used[@T.i].tool_response\r\n        }\r\n    }\r\n}"},{"key":"presentation","label":"Presentation: option1 → option2","a":"Option1[@T.I]: {\n    S: {\n        TASK_DESCRIPTION\n        env.tool_descriptions // description of each tool, how to use them, and when to use them\n        env.in_context_examples\n    }\n    // previous turns\n    ForEach(@t: range(1,@T)) {\n        ForEach(i: range(1, @t.substeps)) {\n            A: sys.tool_used[@t.i]\n            T: sys.tool_used[@t.i].tool_response\n        }\n    }\n    // current turn\n    ForEach(i: range(1, I)) {\n        A: sys.tool_used[@T.i]\n        T: sys.tool_used[@T.i].tool_response\n    }\n}","b":"Option2[@T.I]: {\n    S: {\n        TASK_DESCRIPTION\n        env.tool_descriptions // description of each tool, how to use them, and when to use them\n        env.in_context_examples\n    }\n\n    A: {\n        // previous turns\n        ForEach(@t: range(1,@T)) {\n            ForEach(i: range(1, @t.substeps)) {\n                resp.tool_reasoning[@t.i] \n                sys.tool_used[@t.i]\n                sys.tool_used[@t.i].tool_response\n            }\n        }\n        // current turn\n        ForEach(i: range(1, I)) {\n            resp.tool_reasoning[@T.i]\n            sys.tool_used[@T.i]\n            sys.tool_used[@T.i].tool_response\n        }\n    }\n\n}"}];
+    const PRESETS = [{"key":"react","label":"ReAct: v1 → v2","a":"React1[@T]: {\r\n    S: {\r\n        TASK_DESC\r\n        AVAILABLE_TOOLS\r\n    }\r\n    U: env.user_input[@1]\r\n    ForEach(t: range(2,@T)) {\r\n      A: {\r\n        resp.tool_reasoning[@t]\r\n        sys.tool_call[@t].tool_called\r\n      }\r\n      U: sys.tool_call[@t].tool_response\r\n    }\r\n}","b":"React2[@T.I]: {\r\n    S: INSTRUCTIONS_AND_TOOLS\r\n    // History\r\n    Mark 1 {\r\n    // Chat loop (Main loop)\r\n    ForEach(t: range(1,@T-1)) {\r\n        U: env.user_question[@t]\r\n        Mark 2 {\r\n        // React loop (internal loop)\r\n        ForEach(i: range(1,@t.substeps)) {\r\n          A: sys.tool_used[@t.i].name_and_args\r\n          T: sys.tool_used[@t.i].tool_response\r\n        }}\r\n        A: resp.response // final response after ReAct loop\r\n    }\r\n  }\r\n    // Last turn\r\n    U: env.user_question[@T]\r\n    ForEach(i: range(1,@T.substeps)) {\r\n      A: sys.tool_used[@T.i].name_and_args\r\n      T: sys.tool_used[@T.i].tool_response\r\n    }\r\n}"},{"key":"mint","label":"MintAgent: opt1 → opt2","a":"Var1[@T]: {\r\n    U: {\r\n        TASK_DESCRIPTION(sys.max_total_steps)\r\n        env.tool_desc\r\n        env.in_context_example\r\n        env.task_prompt\r\n    } \r\n\r\n    // only the result of the previous turns or the new query in them\r\n    ForEach(@t: range(1, @T)){\r\n        A: {\r\n                resp.solution_reasoning[@t]\r\n                resp.solution[@t]\r\n        }\r\n        U: env.feedback[@t] // response if the answer was right or wrong, remaining tries if failed\r\n    }\r\n\r\n    // all the tool calls and reponses from the current turn\r\n    ForEach(i: range(1, @T.substeps)){\r\n        A: sys.tool_used[@T.i]\r\n        T: sys.tool_used[@T.i].tool_response\r\n    }\r\n}","b":"Var2[@T]: {\r\n    U: {\r\n        TASK_DESCRIPTION(sys.max_total_steps)\r\n        env.tool_desc\r\n        env.in_context_example\r\n        env.task_prompt\r\n    } \r\n    \r\n    // all the tool calls and reponses from all turns\r\n    ForEach(@t: range(1,@T)) {\r\n        A: { \r\n            ForEach(i: range(1, @t.substeps)){\r\n                sys.tool_used[@t.i]\r\n                sys.tool_used[@t.i].tool_response\r\n            }\r\n        }\r\n        A: {\r\n            resp.solution_reasoning[@t]\r\n            resp.solution[@t]\r\n        }\r\n        U: env.feedback[@t] // response if the answer was right or wrong, remaining tries if failed\r\n    } \r\n    \r\n    ForEach(i: range(1, @T.substeps)) {\r\n        A: {\r\n            sys.tool_used[@T.i]\r\n            sys.tool_used[@T.i].tool_response\r\n        }\r\n    }\r\n}"},{"key":"presentation","label":"Presentation: option1 → option2","a":"Option1[@T.I]: {\r\n    S: {\r\n        TASK_DESCRIPTION\r\n        env.tool_descriptions // description of each tool, how to use them, and when to use them\r\n        env.in_context_examples\r\n    }\r\n    // previous turns\r\n    ForEach(@t: range(1,@T)) {\r\n        ForEach(i: range(1, @t.substeps)) {\r\n            A: sys.tool_used[@t.i]\r\n            T: sys.tool_used[@t.i].tool_response\r\n        }\r\n    }\r\n    // current turn\r\n    ForEach(i: range(1, I)) {\r\n        A: sys.tool_used[@T.i]\r\n        T: sys.tool_used[@T.i].tool_response\r\n    }\r\n}","b":"Option2[@T.I]: {\r\n    S: {\r\n        TASK_DESCRIPTION\r\n        env.tool_descriptions // description of each tool, how to use them, and when to use them\r\n        env.in_context_examples\r\n    }\r\n\r\n    A: {\r\n        // previous turns\r\n        ForEach(@t: range(1,@T)) {\r\n            ForEach(i: range(1, @t.substeps)) {\r\n                resp.tool_reasoning[@t.i] \r\n                sys.tool_used[@t.i]\r\n                sys.tool_used[@t.i].tool_response\r\n            }\r\n        }\r\n        // current turn\r\n        ForEach(i: range(1, I)) {\r\n            resp.tool_reasoning[@T.i]\r\n            sys.tool_used[@T.i]\r\n            sys.tool_used[@T.i].tool_response\r\n        }\r\n    }\r\n\r\n}"}];
     const { createEditor } = ACDLEditor;
     const { diffFiles, formatDiffHtml, DIFF_CSS } = ACDLDiff;
 
