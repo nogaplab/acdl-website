@@ -2209,33 +2209,40 @@ var ACDL = (() => {
   });
 
   // src/scanner.ts
-  var NAMESPACE_KEYWORDS = /* @__PURE__ */ new Set([
-    "env",
-    "sys",
-    "resp"
+  var CONTROL_KEYWORDS = /* @__PURE__ */ new Map([
+    ["if", "If"],
+    ["elseif", "ElseIf"],
+    ["elsif", "ElseIf"],
+    ["elif", "ElseIf"],
+    ["else", "Else"],
+    ["foreach", "ForEach"],
+    ["switch", "Switch"],
+    ["case", "Case"],
+    ["default", "Default"],
+    ["break", "break"],
+    ["continue", "continue"],
+    ["name", "Name"],
+    ["for", "for"],
+    ["in", "in"],
+    ["mark", "Mark"],
+    ["when", "when"],
+    ["not", "not"],
+    ["and", "and"],
+    ["or", "or"],
+    ["strfrag", "StrFrag"],
+    ["stringfrag", "StrFrag"],
+    ["rolesfrag", "RolesFrag"],
+    ["rolefrag", "RolesFrag"],
+    ["frag", "Frag"]
   ]);
-  var CONTROL_KEYWORDS = /* @__PURE__ */ new Set([
-    "If",
-    "ElseIf",
-    "Else",
-    "ForEach",
-    "Switch",
-    "Case",
-    "Default",
-    "break",
-    "continue",
-    "Name",
-    "for",
-    "in",
-    "Mark",
-    "when",
-    "not",
-    "and",
-    "or",
-    "StrFrag",
-    "RolesFrag",
-    "Frag"
+  var NAMESPACE_KEYWORDS = /* @__PURE__ */ new Map([
+    ["env", "env"],
+    ["sys", "sys"],
+    ["resp", "resp"],
+    ["prompt", "prompt"]
   ]);
+  var UNCONDITIONAL_NAMESPACES = /* @__PURE__ */ new Set(["env", "sys", "resp"]);
+  var DOT_ONLY_NAMESPACES = /* @__PURE__ */ new Set(["prompt"]);
   var LOGIC_OP = /* @__PURE__ */ new Set([
     "=",
     "!",
@@ -2243,7 +2250,11 @@ var ACDL = (() => {
     ">",
     "&",
     "|",
-    "^"
+    "^",
+    "\u2260",
+    "\u2264",
+    "\u2265",
+    "\u2248"
   ]);
   var ARITH_OP = /* @__PURE__ */ new Set([
     "-",
@@ -2251,6 +2262,18 @@ var ACDL = (() => {
     "%",
     "*",
     "/"
+  ]);
+  var OPERATOR_ALIASES = /* @__PURE__ */ new Map([
+    ["\u2212", "-"],
+    // minus sign
+    ["\u2013", "-"],
+    // en dash
+    ["\u2014", "-"],
+    // em dash
+    ["\xD7", "*"],
+    // multiplication sign
+    ["\xF7", "/"]
+    // division sign
   ]);
   var SYMBOLS = /* @__PURE__ */ new Set([
     ":",
@@ -2264,11 +2287,18 @@ var ACDL = (() => {
     "[",
     "]",
     "@",
-    "#",
     "$",
     "?",
     "!",
     "_"
+  ]);
+  var QUOTE_PAIRS = /* @__PURE__ */ new Map([
+    ['"', '"'],
+    ["'", "'"],
+    ["\u201C", "\u201D"],
+    // “ ”
+    ["\u2018", "\u2019"]
+    // ‘ ’
   ]);
   var INVISIBLE = new Set(
     [
@@ -2304,43 +2334,48 @@ var ACDL = (() => {
       }
       const ch = this.peek();
       if (ch === "/" && this.peekNext() === "/") {
-        return this.readComment();
+        return this.readLineComment(2);
       }
-      if (ch === "\u2026") {
+      if (ch === "#") {
+        return this.readLineComment(1);
+      }
+      if (ch === "/" && this.peekNext() === "*") {
+        return this.readBlockComment();
+      }
+      if (ch === "\u2026" || ch === "\u2025") {
         const col = this.col;
         this.advance();
         return { type: "RANGE", value: "\u2026", line: this.line, col };
       }
-      if (ch === ".") {
-        if (this.peekNext() === "." && this.input[this.pos + 2] === ".") {
-          const col = this.col;
-          this.advance();
-          this.advance();
-          this.advance();
-          return { type: "RANGE", value: "...", line: this.line, col };
-        }
-      }
-      if (LOGIC_OP.has(ch)) {
+      if (ch === "." && this.peekNext() === ".") {
         const col = this.col;
-        const value = this.advance();
+        this.advance();
+        this.advance();
+        if (this.peek() === ".") this.advance();
+        return { type: "RANGE", value: "...", line: this.line, col };
+      }
+      const normalized = OPERATOR_ALIASES.get(ch) ?? ch;
+      if (LOGIC_OP.has(normalized)) {
+        const col = this.col;
+        this.advance();
         return {
           type: "LOGIC_OP",
-          value,
+          value: normalized,
           line: this.line,
           col
         };
       }
-      if (ARITH_OP.has(ch)) {
+      if (ARITH_OP.has(normalized)) {
         const col = this.col;
-        const value = this.advance();
+        this.advance();
         return {
           type: "ARITH_OP",
-          value,
+          value: normalized,
           line: this.line,
           col
         };
       }
-      if (ch === '"') {
+      if (QUOTE_PAIRS.has(ch)) {
         return this.readString();
       }
       if (SYMBOLS.has(ch)) {
@@ -2352,13 +2387,23 @@ var ACDL = (() => {
       if (this.isIdentStart(ch)) {
         return this.readIdentifier();
       }
+      if (/[\p{P}\p{S}]/u.test(ch)) {
+        return this.readSymbol();
+      }
       throw this.error(`Unexpected character '${ch}' (U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")})`);
     }
     /* ───────────── token readers ───────────── */
-    readComment() {
+    /**
+     * A `//` or `#` comment, running to end of line. `openerLength` is how many
+     * characters introduce it.
+     *
+     * Braces are ordinary comment text: stopping at "}" would make any comment
+     * quoting a code literal terminate early, leaving the remainder to be
+     * tokenized as source.
+     */
+    readLineComment(openerLength) {
       const startCol = this.col;
-      this.advance();
-      this.advance();
+      for (let i = 0; i < openerLength; i++) this.advance();
       let value = "";
       while (!this.isEOF() && this.peek() !== "\n") {
         value += this.advance();
@@ -2370,13 +2415,32 @@ var ACDL = (() => {
         col: startCol
       };
     }
+    /** A slash-star comment, which may span lines. */
+    readBlockComment() {
+      const startCol = this.col;
+      const startLine = this.line;
+      this.advance();
+      this.advance();
+      let value = "";
+      while (!this.isEOF()) {
+        if (this.peek() === "*" && this.peekNext() === "/") {
+          this.advance();
+          this.advance();
+          return { type: "COMMENT", value: value.trim(), line: startLine, col: startCol };
+        }
+        value += this.advance();
+      }
+      throw this.error(`Unterminated block comment (opened at line ${startLine})`);
+    }
     readString() {
       const startCol = this.col;
+      const startLine = this.line;
+      const closer = QUOTE_PAIRS.get(this.peek());
       this.advance();
       let value = "";
       while (!this.isEOF()) {
         const ch = this.peek();
-        if (ch === '"') {
+        if (ch === closer) {
           this.advance();
           return {
             type: "STRING",
@@ -2388,12 +2452,15 @@ var ACDL = (() => {
         if (ch === "\\") {
           this.advance();
           if (this.isEOF()) {
-            throw this.error("Unterminated string literal");
+            throw this.error(`Unterminated string literal (opened at line ${startLine})`);
           }
           const esc = this.advance();
           switch (esc) {
             case '"':
               value += '"';
+              break;
+            case "'":
+              value += "'";
               break;
             case "\\":
               value += "\\";
@@ -2405,16 +2472,17 @@ var ACDL = (() => {
               value += "	";
               break;
             default:
-              throw this.error(`Invalid escape sequence \\${esc}`);
+              value += "\\" + esc;
+              break;
           }
           continue;
         }
         if (ch === "\n") {
-          throw this.error("Unterminated string literal");
+          throw this.error(`Unterminated string literal (opened at line ${startLine})`);
         }
         value += this.advance();
       }
-      throw this.error("Unterminated string literal");
+      throw this.error(`Unterminated string literal (opened at line ${startLine})`);
     }
     readSymbol() {
       const startCol = this.col;
@@ -2432,18 +2500,24 @@ var ACDL = (() => {
       while (!this.isEOF() && this.isIdentPart(this.peek())) {
         value += this.advance();
       }
-      if (CONTROL_KEYWORDS.has(value)) {
-        return {
-          type: "KEYWORD",
-          value,
-          line: this.line,
-          col: startCol
-        };
+      const lower = value.toLowerCase();
+      const namespace = NAMESPACE_KEYWORDS.get(lower);
+      if (namespace) {
+        const dotOnly = DOT_ONLY_NAMESPACES.has(lower);
+        if (UNCONDITIONAL_NAMESPACES.has(value) || this.nextSignificantIsPathStart(dotOnly)) {
+          return {
+            type: "KEYWORD",
+            value: namespace,
+            line: this.line,
+            col: startCol
+          };
+        }
       }
-      if (NAMESPACE_KEYWORDS.has(value)) {
+      const control = CONTROL_KEYWORDS.get(lower);
+      if (control) {
         return {
           type: "KEYWORD",
-          value,
+          value: control,
           line: this.line,
           col: startCol
         };
@@ -2454,6 +2528,18 @@ var ACDL = (() => {
         line: this.line,
         col: startCol
       };
+    }
+    /**
+     * Whether the next non-whitespace character starts a context-variable path —
+     * `.` for a field or `[` for an index. Used to decide whether a non-canonical
+     * casing such as `Env` is a namespace or an ordinary identifier.
+     */
+    nextSignificantIsPathStart(dotOnly) {
+      let i = this.pos;
+      while (i < this.input.length && isWhitespace(this.input[i])) i++;
+      const ch = this.input[i];
+      if (ch === "." && this.input[i + 1] !== ".") return true;
+      return !dotOnly && ch === "[";
     }
     readNumber() {
       const startCol = this.col;
@@ -2498,11 +2584,15 @@ var ACDL = (() => {
     isDigit(ch) {
       return ch >= "0" && ch <= "9";
     }
+    /**
+     * Identifiers accept any Unicode letter, so a spec may name things in the
+     * language its authors actually work in.
+     */
     isIdentStart(ch) {
-      return /[a-zA-Z_]/.test(ch);
+      return /[\p{L}_]/u.test(ch);
     }
     isIdentPart(ch) {
-      return /[a-zA-Z0-9_]/.test(ch);
+      return /[\p{L}\p{N}_]/u.test(ch);
     }
     error(msg) {
       return new Error(`[${this.line}:${this.col}] ${msg}`);
@@ -2629,11 +2719,13 @@ var ACDL = (() => {
       value: tok.value
     };
   }
-  var Parser = class {
+  var _Parser = class _Parser {
     constructor(input) {
       __publicField(this, "tokens", []);
       __publicField(this, "pos", 0);
       __publicField(this, "lastConsumedLine", 0);
+      /** Marks without an explicit number are numbered in source order. */
+      __publicField(this, "markCounter", 0);
       const scanner = new Scanner(input);
       let token;
       do {
@@ -2687,16 +2779,80 @@ var ACDL = (() => {
       }
       return false;
     }
+    /**
+     * The role the token at `offset` introduces, or undefined if it introduces
+     * none. A role marker only counts as one when `:` or `{` follows: `a` and `t`
+     * are ordinary loop variables, and must not shadow the assistant and tool
+     * roles wherever they appear.
+     */
+    roleAt(offset = 0) {
+      const tok = this.tokens[this.pos + offset];
+      const next = this.tokens[this.pos + offset + 1];
+      if (!tok || tok.type !== "IDENT") return void 0;
+      if (!next || next.value !== ":" && next.value !== "{") return void 0;
+      return _Parser.ROLE_MARKERS.get(String(tok.value).toLowerCase());
+    }
+    /** Whether this token is the early-termination marker, in any casing. */
+    isEndMarker(tok) {
+      return tok.type === "IDENT" && _Parser.END_MARKERS.has(String(tok.value).toLowerCase());
+    }
+    /** `range(...)`, in any casing — the one built-in iterable. */
+    isRangeCall() {
+      const tok = this.peek();
+      return tok.type === "IDENT" && String(tok.value).toLowerCase() === "range" && this.peekNext().value === "(";
+    }
+    /**
+     * Consume the `:` that introduces a block body, if it is there. `S: { ... }`
+     * and `S { ... }` mean the same thing, as do `Spec[@T]: {` and `Spec[@T] {`.
+     */
+    matchOptionalColon() {
+      this.match("SYMBOL", ":");
+    }
+    /** Stray statement separators. ACDL has none, but muscle memory supplies them. */
+    skipSeparators() {
+      while (this.peek().type === "SYMBOL" && this.peek().value === ";") this.consume();
+    }
+    /**
+     * Drop a trailing `:` from a captured header expression. `Case user: {` and
+     * `If (x): {` read naturally and appear in the wild — the language reference's
+     * own worked example writes the former — but the colon is punctuation, not
+     * part of the expression, and must not reach the renderer.
+     */
+    trimTrailingColon(tokens) {
+      while (tokens.length) {
+        const last = tokens[tokens.length - 1];
+        if (last.type !== "SYMBOL" || last.value !== ":") break;
+        tokens.pop();
+      }
+      return tokens;
+    }
+    /** True when the current token closes a block, or the file has run out. */
+    atBlockEnd() {
+      return this.isEOF() || this.peek().value === "}";
+    }
+    /**
+     * Consume a block's closing brace, naming the line the block opened on when it
+     * is missing — far more useful than "expected }, got EOF" pointing at the last
+     * line of the file.
+     */
+    consumeBlockClose(openLine, what) {
+      if (this.isEOF()) {
+        const tok = this.peek();
+        throw new Error(`[${tok.line}:${tok.col}] Missing closing "}" for ${what} opened at line ${openLine}`);
+      }
+      this.consume("SYMBOL", "}");
+    }
     /* ───────────────── Grammar Rules (Outside Role) ───────────────── */
     /**
      * Entry Point: Prompt[indices]: { ... }
      */
     parsePrompt() {
       const title = this.parseTitle();
-      this.consume("SYMBOL", ":");
+      this.matchOptionalColon();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const body = this.parsePromptBody();
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, `prompt "${title.name}"`);
       console.log("parsed prompt");
       return prompt({ title, body });
     }
@@ -2707,6 +2863,8 @@ var ACDL = (() => {
     parseFile() {
       const blocks = [];
       while (!this.isEOF()) {
+        this.skipSeparators();
+        if (this.isEOF()) break;
         const tok = this.peek();
         if (tok.type === "COMMENT") {
           const text = this.consume("COMMENT").value;
@@ -2729,6 +2887,8 @@ var ACDL = (() => {
     parseFileWithRanges() {
       const ranges = [];
       while (!this.isEOF()) {
+        this.skipSeparators();
+        if (this.isEOF()) break;
         const tok = this.peek();
         const startLine = tok.line;
         let block;
@@ -2760,13 +2920,16 @@ var ACDL = (() => {
         }
         this.consume("SYMBOL", "]");
       }
-      this.consume("SYMBOL", ":");
+      this.matchOptionalColon();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const body = [];
-      while (this.peek().type !== "EOF" && this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         body.push(this.parseRoleBuildingBlock());
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, `StrFrag "${name}"`);
       console.log("parsed StrFrag definition");
       return strFragDef({ name, params, body });
     }
@@ -2784,10 +2947,13 @@ var ACDL = (() => {
         }
         this.consume("SYMBOL", "]");
       }
-      this.consume("SYMBOL", ":");
+      this.matchOptionalColon();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const body = [];
-      while (this.peek().type !== "EOF" && this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         if (this.peek().type === "COMMENT") {
           const text = this.consume("COMMENT").value;
           body.push(commentBlock({ text }));
@@ -2795,7 +2961,7 @@ var ACDL = (() => {
         }
         body.push(this.parsePromptBodyItem());
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, `RolesFrag "${name}"`);
       console.log("parsed RolesFrag definition");
       return rolesFragDef({ name, params, body });
     }
@@ -2814,7 +2980,9 @@ var ACDL = (() => {
       while (this.peek().type === "COMMENT") {
         this.pos++;
       }
-      const isCompletionPrompt = this.peek().type === "IDENT" && this.peek().value === "N";
+      const marker = this.peek();
+      const after = this.peekNext();
+      const isCompletionPrompt = marker.type === "IDENT" && _Parser.NONE_MARKERS.has(String(marker.value).toLowerCase()) && !!after && (after.value === ":" || after.value === "{");
       this.pos = savedPos;
       if (isCompletionPrompt) {
         return this.parseCompletionPromptBody();
@@ -2826,7 +2994,9 @@ var ACDL = (() => {
      */
     parseChatPromptBody() {
       const body = [];
-      while (this.peek().type !== "EOF" && this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         if (this.peek().type === "COMMENT") {
           const text = this.consume("COMMENT").value;
           body.push(commentBlock({ text }));
@@ -2858,15 +3028,18 @@ var ACDL = (() => {
      * Parse a NoneMessage: N: { RoleBuildingBlock* }
      */
     parseNoneMessage() {
-      this.consume("IDENT", "N");
-      this.consume("SYMBOL", ":");
+      this.consume("IDENT");
+      this.matchOptionalColon();
       const body = [];
       if (this.peek().value === "{") {
+        const openLine = this.peek().line;
         this.consume("SYMBOL", "{");
-        while (this.peek().type !== "EOF" && this.peek().value !== "}") {
+        while (!this.atBlockEnd()) {
+          this.skipSeparators();
+          if (this.atBlockEnd()) break;
           body.push(this.parseRoleBuildingBlock());
         }
-        this.consume("SYMBOL", "}");
+        this.consumeBlockClose(openLine, "N message");
       } else {
         const startLine = this.peek().line;
         body.push(this.parseRoleBuildingBlockSingleLine(startLine));
@@ -2883,7 +3056,7 @@ var ACDL = (() => {
       const tok = this.peek();
       const nextTok = this.peekNext();
       const val = tok.value;
-      if (tok.type === "IDENT" && (val === "S" || val === "U" || val === "A" || val === "T")) {
+      if (this.roleAt()) {
         console.log("parsing role message");
         return this.parseRoleMessage();
       }
@@ -2892,6 +3065,8 @@ var ACDL = (() => {
           case "If":
             return this.parseConditionalOutside();
           case "ForEach":
+            return this.parseLoopOutside();
+          case "for":
             return this.parseLoopOutside();
           case "Switch":
             return this.parseSwitchOutside();
@@ -2903,14 +3078,14 @@ var ACDL = (() => {
             return this.parseRolesFragInvocation();
         }
       }
-      if (tok.type === "IDENT" && val === "PromptEndsHere") {
+      if (this.isEndMarker(tok)) {
         return this.parseEndBlock();
       }
       if (tok.type === "COMMENT") {
         const text = this.consume("COMMENT").value;
         return commentBlock({ text });
       }
-      throw new Error(`[${tok.line}:${tok.col}] Syntax Error: Unexpected token "${val}" in global scope.`);
+      throw new Error(`[${tok.line}:${tok.col}] Syntax Error: Unexpected token "${val}" in global scope. Expected a role message (S:, U:, A:, T:), control flow (If, ForEach, Switch), Mark, Name, Frag, or a comment.`);
     }
     /**
      * Parse a MarkBlock: MARK number { PromptBlock+ }
@@ -2918,11 +3093,14 @@ var ACDL = (() => {
      */
     parseMarkBlock() {
       this.consume("KEYWORD", "Mark");
-      const numberTok = this.consume("NUMBER");
-      const markNumber = parseInt(numberTok.value, 10);
+      const markNumber = this.parseMarkNumber();
+      this.matchOptionalColon();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const blocks = [];
-      do {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         if (this.peek().type === "COMMENT") {
           const text = this.consume("COMMENT").value;
           blocks.push(commentBlock({ text }));
@@ -2930,8 +3108,8 @@ var ACDL = (() => {
         }
         const innerBlock = this.parseTopLevelBlock();
         blocks.push(innerBlock);
-      } while (this.peek().value !== "}");
-      this.consume("SYMBOL", "}");
+      }
+      this.consumeBlockClose(openLine, `Mark ${markNumber}`);
       return markBlock({ markNumber, body: blocks });
     }
     /**
@@ -2940,11 +3118,14 @@ var ACDL = (() => {
      */
     parseMarkBlockInside() {
       this.consume("KEYWORD", "Mark");
-      const numberTok = this.consume("NUMBER");
-      const markNumber = parseInt(numberTok.value, 10);
+      const markNumber = this.parseMarkNumber();
+      this.matchOptionalColon();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const blocks = [];
-      do {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         if (this.peek().type === "COMMENT") {
           const text = this.consume("COMMENT").value;
           blocks.push(commentBlock({ text }));
@@ -2952,26 +3133,41 @@ var ACDL = (() => {
         }
         const innerBlock = this.parseRoleBuildingBlock();
         blocks.push(innerBlock);
-      } while (this.peek().value !== "}");
-      this.consume("SYMBOL", "}");
+      }
+      this.consumeBlockClose(openLine, `Mark ${markNumber}`);
       return markBlockInsideRole({ markNumber, body: blocks });
+    }
+    /**
+     * A mark's number is purely presentational, so an omitted one is not worth an
+     * error: unnumbered marks are numbered in source order, continuing from the
+     * highest number the file has used so far.
+     */
+    parseMarkNumber() {
+      if (this.peek().type === "NUMBER") {
+        const explicit = parseInt(this.consume("NUMBER").value, 10);
+        this.markCounter = Math.max(this.markCounter, explicit);
+        return explicit;
+      }
+      return ++this.markCounter;
     }
     /*
      * RoleMessage = ROLE_ID: { RoleBuildingBlock* } | ROLE_ID: RoleBuildingBlock
      * Supports both multi-line blocks with curly braces and single-line without braces
     */
     parseRoleMessage() {
-      const roleId = this.consume("IDENT").value;
-      this.consume("SYMBOL", ":");
-      const roleMap = { "S": "system", "U": "user", "A": "assistant", "T": "tool" };
-      const role = roleMap[roleId];
+      const role = this.roleAt();
+      this.consume("IDENT");
+      this.matchOptionalColon();
       const body = [];
       if (this.peek().value === "{") {
+        const openLine = this.peek().line;
         this.consume("SYMBOL", "{");
-        while (this.peek().type !== "EOF" && this.peek().value !== "}") {
+        while (!this.atBlockEnd()) {
+          this.skipSeparators();
+          if (this.atBlockEnd()) break;
           body.push(this.parseRoleBuildingBlock());
         }
-        this.consume("SYMBOL", "}");
+        this.consumeBlockClose(openLine, `${role} message`);
       } else {
         const startLine = this.peek().line;
         body.push(this.parseRoleBuildingBlockSingleLine(startLine));
@@ -2989,10 +3185,14 @@ var ACDL = (() => {
         throw new Error(`[${tok.line}:${tok.col}] Single-line role syntax cannot span multiple lines`);
       }
       const val = tok.value;
+      if (tok.type === "SYMBOL" && val === "$") {
+        return this.parseNameRef();
+      }
       if (tok.type === "KEYWORD") {
-        if (val === "If" || val === "ForEach" || val === "Switch") {
-          throw new Error(`[${tok.line}:${tok.col}] Control flow statements not allowed in single-line role syntax`);
+        if (val === "If" || val === "ForEach" || val === "for" || val === "Switch") {
+          throw new Error(`[${tok.line}:${tok.col}] Control flow statements not allowed in single-line role syntax. Use the braced form: ${this.tokens[this.pos - 2]?.value ?? "U"}: { ... }`);
         }
+        if (val === "Frag") return this.parseStrFragInvocation();
         const namespaces = ["env", "sys", "resp", "prompt"];
         if (namespaces.includes(val)) {
           return this.parseContextVar();
@@ -3018,7 +3218,7 @@ var ACDL = (() => {
       }
       if (tok.type === "KEYWORD") {
         if (val === "If") return this.parseConditionalInside();
-        if (val === "ForEach") return this.parseLoopInside();
+        if (val === "ForEach" || val === "for") return this.parseLoopInside();
         if (val === "Switch") return this.parseSwitchInside();
         if (val === "Mark") return this.parseMarkBlockInside();
         if (val === "Name") return this.parseNameDef();
@@ -3032,11 +3232,11 @@ var ACDL = (() => {
           return this.parseContextVar();
         }
       }
-      if (tok.type === "IDENT" && val === "PromptEndsHere") {
+      if (this.isEndMarker(tok)) {
         return this.parseEndBlock();
       }
       if (tok.type === "IDENT") return this.parseTemplateOrFunc();
-      throw new Error(`[${tok.line}:${tok.col}] Unexpected ${tok.type} (${val}) inside role.`);
+      throw new Error(`[${tok.line}:${tok.col}] Unexpected ${tok.type} (${val}) inside role. Expected a context variable, template, function, control flow, Name, Frag, or a comment.`);
     }
     /* ───────────────── Name Definitions ───────────────── */
     /**
@@ -3046,8 +3246,7 @@ var ACDL = (() => {
     parseNameDef() {
       this.consume("KEYWORD", "Name");
       const varName = this.consume("IDENT").value;
-      this.consume("SYMBOL", ":");
-      this.consume("LOGIC_OP", "=");
+      this.consumeAssignment(varName);
       const tok = this.peek();
       let value;
       if (tok.type === "SYMBOL" && tok.value === "[") {
@@ -3067,6 +3266,18 @@ var ACDL = (() => {
         throw new Error(`[${tok.line}:${tok.col}] Expected ContextVar, Func, list comprehension, or Frag invocation after :=, got ${tok.type}`);
       }
       return nameDef({ name: varName, value });
+    }
+    /**
+     * The binding operator of a name definition. Canonically `:=`; a bare `=` or
+     * `:` is accepted too, since both are what people reach for first and neither
+     * is ambiguous in this position.
+     */
+    consumeAssignment(varName) {
+      const sawColon = this.match("SYMBOL", ":");
+      const sawEquals = this.match("LOGIC_OP", "=");
+      if (sawColon || sawEquals) return;
+      const tok = this.peek();
+      throw new Error(`[${tok.line}:${tok.col}] Expected ":=" after "Name ${varName}", got "${tok.value}"`);
     }
     /**
      * Parse a list comprehension: [expr for var in iterable]
@@ -3094,7 +3305,7 @@ var ACDL = (() => {
       const variable = this.consume("IDENT").value;
       this.consume("KEYWORD", "in");
       let iterable;
-      if (this.peek().value === "range" && this.peekNext().value === "(") {
+      if (this.isRangeCall()) {
         iterable = this.parseRangeExpr();
       } else {
         const iterTokens = [];
@@ -3216,10 +3427,11 @@ var ACDL = (() => {
     parseTextArgs() {
       const args = [];
       if (this.peek().value === ")" || this.peek().value === "]") return args;
-      do {
-        const arg = this.parseSingleTextArg();
-        args.push(arg);
-      } while (this.match("SYMBOL", ","));
+      while (true) {
+        args.push(this.parseSingleTextArg());
+        if (!this.match("SYMBOL", ",")) break;
+        if (this.peek().value === ")" || this.peek().value === "]") break;
+      }
       return args;
     }
     /** Parse a single argument, which may be an arithmetic expression */
@@ -3358,49 +3570,81 @@ var ACDL = (() => {
      * Condition is delimited by parentheses, same style as conditionals.
      */
     parseEndBlock() {
-      this.consume("IDENT", "PromptEndsHere");
-      this.consume("KEYWORD", "when");
-      this.consume("SYMBOL", "(");
+      const marker = this.consume("IDENT");
+      this.match("KEYWORD", "when");
       const conditionTokens = [];
-      let depth = 1;
-      while (depth > 0) {
-        if (this.isEOF()) throw new Error("Unterminated PromptEndsHere when condition");
-        const tok = this.consume();
-        if (tok.value === "(") depth++;
-        if (tok.value === ")") depth--;
-        if (depth > 0) {
-          conditionTokens.push(toExprToken(tok));
+      if (this.match("SYMBOL", "(")) {
+        let depth = 1;
+        while (depth > 0) {
+          if (this.isEOF()) {
+            throw new Error(`[${marker.line}:${marker.col}] Unterminated PromptEndsHere condition`);
+          }
+          const tok = this.consume();
+          if (tok.value === "(") depth++;
+          if (tok.value === ")") depth--;
+          if (depth > 0) {
+            conditionTokens.push(toExprToken(tok));
+          }
+        }
+      } else {
+        const line2 = this.peek().line;
+        while (!this.isEOF() && this.peek().line === line2 && this.peek().type !== "COMMENT" && this.peek().value !== "{" && this.peek().value !== "}") {
+          conditionTokens.push(toExprToken(this.consume()));
+        }
+        if (conditionTokens.length === 0) {
+          throw new Error(`[${marker.line}:${marker.col}] PromptEndsHere needs a condition, e.g. PromptEndsHere when (@t == @T)`);
         }
       }
-      return endBlock({ condition: conditionTokens });
+      return endBlock({ condition: this.trimTrailingColon(conditionTokens) });
     }
-    parseLoopOutside() {
-      this.consume("KEYWORD", "ForEach");
-      this.consume("SYMBOL", "(");
+    /**
+     * The header of a ForEach, shared by both scopes: `ForEach(v: iterable)`,
+     * `ForEach v in iterable`, and every combination in between. The parentheses
+     * are optional, and the separator may be `:` or `in`.
+     */
+    parseLoopHeader() {
+      this.consume("KEYWORD");
+      const parenthesised = this.match("SYMBOL", "(");
       const index = this.parseIndex();
-      this.consume("SYMBOL", ":");
+      if (!this.match("SYMBOL", ":") && !this.match("KEYWORD", "in")) {
+        const tok = this.peek();
+        throw new Error(`[${tok.line}:${tok.col}] Expected ":" or "in" between the loop variable and its iterable, got "${tok.value}"`);
+      }
       let iterable;
-      if (this.peek().value === "range" && this.peekNext().value === "(") {
+      if (this.isRangeCall()) {
         iterable = this.parseRangeExpr();
       } else {
         const iterTokens = [];
-        while (!(this.peek().value === ")" && this.peekNext().value === "{")) {
+        let depth = 0;
+        while (true) {
           if (this.isEOF()) throw new Error("Unterminated ForEach iterable");
+          const tok = this.peek();
+          if (depth === 0 && (tok.value === "{" || parenthesised && tok.value === ")")) break;
+          if (tok.value === "(") depth++;
+          if (tok.value === ")") depth--;
           iterTokens.push(toExprToken(this.consume()));
         }
-        iterable = Iterable({ tokens: iterTokens });
+        iterable = Iterable({ tokens: this.trimTrailingColon(iterTokens) });
       }
-      this.consume("SYMBOL", ")");
+      if (parenthesised) this.consume("SYMBOL", ")");
+      this.matchOptionalColon();
+      return { index, iterable };
+    }
+    parseLoopOutside() {
+      const { index, iterable } = this.parseLoopHeader();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const body = [];
-      while (this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         body.push(this.parseTopLevelBlock());
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, "ForEach body");
       return loopBlockOutsideRole({ index, iterable, body });
     }
     parseRangeExpr() {
-      this.consume("IDENT", "range");
+      this.consume("IDENT");
       this.consume("SYMBOL", "(");
       const start = [];
       let depth = 0;
@@ -3438,44 +3682,48 @@ var ACDL = (() => {
       return rangeExpr({ start, end, step });
     }
     parseConditionalOutside() {
-      this.consume("KEYWORD", "If");
-      const ifCondTokens = [];
-      while (this.peek().value !== "{") {
-        if (this.isEOF()) throw new Error("Unterminated If condition");
-        ifCondTokens.push(toExprToken(this.consume()));
-      }
+      const ifTok = this.consume("KEYWORD", "If");
+      const ifCondTokens = this.parseConditionHeader("If");
+      let openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const ifBody = [];
-      while (this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         ifBody.push(this.parseTopLevelBlock());
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, `If body (line ${ifTok.line})`);
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
       while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
         this.skipComments();
-        const type = this.consume().value;
+        const branch = this.consume();
+        const type = this.resolveElseBranch(branch.value);
         if (type === "ElseIf") {
-          const eiCondTokens = [];
-          while (this.peek().value !== "{") {
-            eiCondTokens.push(toExprToken(this.consume()));
-          }
+          const eiCondTokens = this.parseConditionHeader("ElseIf");
+          openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const eiBody = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             eiBody.push(this.parseTopLevelBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `ElseIf body (line ${branch.line})`);
           elseIfConditions.push(eiCondTokens);
           elseIfBodies.push(eiBody);
         } else if (type === "Else") {
+          this.matchOptionalColon();
+          openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const eBody = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             eBody.push(this.parseTopLevelBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Else body (line ${branch.line})`);
           elseBody = eBody;
           break;
         }
@@ -3488,68 +3736,97 @@ var ACDL = (() => {
         elseBody
       });
     }
-    parseLoopInside() {
-      this.consume("KEYWORD", "ForEach");
-      this.consume("SYMBOL", "(");
-      const index = this.parseIndex();
-      this.consume("SYMBOL", ":");
-      let iterable;
-      if (this.peek().value === "range" && this.peekNext().value === "(") {
-        iterable = this.parseRangeExpr();
-      } else {
-        const iterTokens = [];
-        while (!(this.peek().value === ")" && this.peekNext().value === "{")) {
-          if (this.isEOF()) throw new Error("Unterminated ForEach iterable");
-          iterTokens.push(toExprToken(this.consume()));
+    /**
+     * Capture a condition, which runs from after the keyword to the `{` that opens
+     * the body. Surrounding parentheses are conventional but not required, and a
+     * trailing `:` before the brace is punctuation rather than part of the
+     * expression.
+     */
+    parseConditionHeader(keyword) {
+      const tokens = [];
+      while (this.peek().value !== "{") {
+        if (this.isEOF()) {
+          const tok = this.peek();
+          throw new Error(`[${tok.line}:${tok.col}] Unterminated ${keyword} condition: expected "{" to open the body`);
         }
-        iterable = Iterable({ tokens: iterTokens });
+        tokens.push(toExprToken(this.consume()));
       }
-      this.consume("SYMBOL", ")");
+      if (tokens.length === 0) {
+        const tok = this.peek();
+        throw new Error(`[${tok.line}:${tok.col}] ${keyword} needs a condition before "{"`);
+      }
+      return this.trimTrailingColon(tokens);
+    }
+    /**
+     * Which branch an Else-family keyword opens. `Else If` written as two words is
+     * the same construct as `ElseIf`, so the `If` is absorbed here.
+     */
+    resolveElseBranch(keyword) {
+      if (keyword === "Else" && this.peekSkippingComments()?.value === "If") {
+        this.skipComments();
+        this.consume("KEYWORD", "If");
+        return "ElseIf";
+      }
+      return keyword;
+    }
+    parseLoopInside() {
+      const header = this.parseLoopHeader();
+      const index = header.index;
+      const iterable = header.iterable;
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const body = [];
-      while (this.peek().value !== "}") body.push(this.parseRoleBuildingBlock());
-      this.consume("SYMBOL", "}");
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
+        body.push(this.parseRoleBuildingBlock());
+      }
+      this.consumeBlockClose(openLine, "ForEach body");
       return loopBlockInsideRole({ index, iterable, body });
     }
     parseConditionalInside() {
-      this.consume("KEYWORD", "If");
-      const ifCondTokens = [];
-      while (this.peek().value !== "{") {
-        if (this.isEOF()) throw new Error("Unterminated If condition");
-        ifCondTokens.push(toExprToken(this.consume()));
-      }
+      const ifTok = this.consume("KEYWORD", "If");
+      const ifCondTokens = this.parseConditionHeader("If");
+      let openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const ifBody = [];
-      while (this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         ifBody.push(this.parseRoleBuildingBlock());
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, `If body (line ${ifTok.line})`);
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
       while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
         this.skipComments();
-        const type = this.consume().value;
+        const branch = this.consume();
+        const type = this.resolveElseBranch(branch.value);
         if (type === "ElseIf") {
-          const eiCondTokens = [];
-          while (this.peek().value !== "{") {
-            eiCondTokens.push(toExprToken(this.consume()));
-          }
+          const eiCondTokens = this.parseConditionHeader("ElseIf");
+          openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const eiBody = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             eiBody.push(this.parseRoleBuildingBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `ElseIf body (line ${branch.line})`);
           elseIfConditions.push(eiCondTokens);
           elseIfBodies.push(eiBody);
         } else if (type === "Else") {
+          this.matchOptionalColon();
+          openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const eBody = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             eBody.push(this.parseRoleBuildingBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Else body (line ${branch.line})`);
           elseBody = eBody;
           break;
         }
@@ -3564,43 +3841,47 @@ var ACDL = (() => {
     }
     // parseSwitchOutside and parseSwitchInside would follow the same scoping pattern.
     parseSwitchOutside() {
-      this.consume("KEYWORD", "Switch");
-      const exprTokens = [];
-      while (this.peek().value !== "{") {
-        if (this.isEOF()) throw new Error("Expected '{' after Switch expression");
-        exprTokens.push(toExprToken(this.consume()));
-      }
+      const switchTok = this.consume("KEYWORD", "Switch");
+      const exprTokens = this.parseConditionHeader("Switch");
+      const switchOpenLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
       while (true) {
         this.skipComments();
-        if (this.peek().value === "}") break;
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
+        const branch = this.peek();
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
-          const matchTokens = [];
-          while (this.peek().value !== "{") {
-            if (this.isEOF()) throw new Error("Expected '{' after Case match");
-            matchTokens.push(toExprToken(this.consume()));
-          }
+          const matchTokens = this.parseConditionHeader("Case");
+          const openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const body = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             body.push(this.parseTopLevelBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Case body (line ${branch.line})`);
           cases.push(caseBlockOutsideRole({ match: matchTokens, body }));
         } else if (kw === "Default") {
+          this.matchOptionalColon();
+          const openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const body = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             body.push(this.parseTopLevelBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Default body (line ${branch.line})`);
           defaultCase = defaultCaseBlockOutsideRole({ body });
+        } else {
+          throw new Error(`[${branch.line}:${branch.col}] Unexpected "${kw}" inside Switch: expected Case or Default`);
         }
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(switchOpenLine, `Switch (line ${switchTok.line})`);
       return switchBlockOutsideRole({
         expression: exprTokens,
         cases,
@@ -3608,43 +3889,47 @@ var ACDL = (() => {
       });
     }
     parseSwitchInside() {
-      this.consume("KEYWORD", "Switch");
-      const exprTokens = [];
-      while (this.peek().value !== "{") {
-        if (this.isEOF()) throw new Error("Expected '{' after Switch expression");
-        exprTokens.push(toExprToken(this.consume()));
-      }
+      const switchTok = this.consume("KEYWORD", "Switch");
+      const exprTokens = this.parseConditionHeader("Switch");
+      const switchOpenLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
       while (true) {
         this.skipComments();
-        if (this.peek().value === "}") break;
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
+        const branch = this.peek();
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
-          const matchTokens = [];
-          while (this.peek().value !== "{") {
-            if (this.isEOF()) throw new Error("Expected '{' after Case match");
-            matchTokens.push(toExprToken(this.consume()));
-          }
+          const matchTokens = this.parseConditionHeader("Case");
+          const openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const body = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             body.push(this.parseRoleBuildingBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Case body (line ${branch.line})`);
           cases.push(caseBlockInsideRole({ match: matchTokens, body }));
         } else if (kw === "Default") {
+          this.matchOptionalColon();
+          const openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const body = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             body.push(this.parseRoleBuildingBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Default body (line ${branch.line})`);
           defaultCase = defaultCaseBlockInsideRole({ body });
+        } else {
+          throw new Error(`[${branch.line}:${branch.col}] Unexpected "${kw}" inside Switch: expected Case or Default`);
         }
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(switchOpenLine, `Switch (line ${switchTok.line})`);
       return switchBlockInsideRole({
         expression: exprTokens,
         cases,
@@ -3661,6 +3946,37 @@ var ACDL = (() => {
       return this.peek().type === "EOF";
     }
   };
+  /* ───────────────── Tolerances ─────────────────
+   *
+   * ACDL source is written by hand and by models, and neither reliably produces
+   * the canonical spelling of everything. The parser therefore accepts the
+   * obvious variants — punctuation people expect to be optional, separators they
+   * reach for out of habit — and normalises them into the canonical AST, so the
+   * rendered diagram looks the same however the source was typed.
+   */
+  /**
+   * Role markers, by the spellings people actually write. The AST always stores
+   * the canonical role, so rendering is unaffected by which spelling was used.
+   */
+  __publicField(_Parser, "ROLE_MARKERS", /* @__PURE__ */ new Map([
+    ["s", "system"],
+    ["system", "system"],
+    ["u", "user"],
+    ["user", "user"],
+    ["a", "assistant"],
+    ["assistant", "assistant"],
+    ["t", "tool"],
+    ["tool", "tool"]
+  ]));
+  /** The completion-format marker, `N:`. */
+  __publicField(_Parser, "NONE_MARKERS", /* @__PURE__ */ new Set(["n", "none"]));
+  /** Spellings of the early-termination marker. */
+  __publicField(_Parser, "END_MARKERS", /* @__PURE__ */ new Set([
+    "promptendshere",
+    "prompt_ends_here",
+    "promptends"
+  ]));
+  var Parser = _Parser;
 
   // src/renderPrompt.ts
   function wrapBlock(cls, headerHtml, bodyHtml) {
@@ -39457,25 +39773,46 @@ var ACDLEditor = (() => {
   // src/editor/acdl-language.ts
   var NAMESPACE_KEYWORDS = /* @__PURE__ */ new Set(["env", "sys", "resp", "prompt"]);
   var CONTROL_KEYWORDS = /* @__PURE__ */ new Set([
-    "If",
-    "ElseIf",
-    "Else",
-    "ForEach",
-    "Switch",
-    "Case",
-    "Default",
+    "if",
+    "elseif",
+    "elsif",
+    "elif",
+    "else",
+    "foreach",
+    "switch",
+    "case",
+    "default",
     "break",
     "continue",
     "name",
     "for",
     "in",
-    "Mark",
-    "when"
+    "mark",
+    "when",
+    "and",
+    "or",
+    "not",
+    "strfrag",
+    "stringfrag",
+    "rolesfrag",
+    "rolefrag",
+    "frag"
   ]);
-  var ROLE_LETTERS = /* @__PURE__ */ new Set(["S", "U", "A", "T", "N"]);
+  var ROLE_MARKERS = /* @__PURE__ */ new Set([
+    "s",
+    "u",
+    "a",
+    "t",
+    "n",
+    "system",
+    "user",
+    "assistant",
+    "tool",
+    "none"
+  ]);
   function tokenize(stream, state) {
     if (stream.eatSpace()) return null;
-    if (stream.match("//")) {
+    if (stream.match("//") || stream.match("#")) {
       stream.skipToEnd();
       state.afterDot = false;
       return "comment";
@@ -39509,11 +39846,14 @@ var ACDLEditor = (() => {
       if (wasAfterDot) {
         return "variable";
       }
-      if (ROLE_LETTERS.has(word) && stream.peek() === ":") {
+      const lower = word.toLowerCase();
+      if (ROLE_MARKERS.has(lower) && stream.peek() === ":") {
         return "tag";
       }
-      if (NAMESPACE_KEYWORDS.has(word)) return "keyword";
-      if (CONTROL_KEYWORDS.has(word)) return "builtin";
+      if (NAMESPACE_KEYWORDS.has(lower) && (lower !== "prompt" || stream.peek() === ".")) {
+        return "keyword";
+      }
+      if (CONTROL_KEYWORDS.has(lower)) return "builtin";
       if (/^[A-Z][A-Z0-9_]+$/.test(word)) return "def";
       if (word === "Prompt") return "keyword";
       return "variable";
@@ -40217,33 +40557,40 @@ var ACDLEditor = (() => {
   ];
 
   // src/scanner.ts
-  var NAMESPACE_KEYWORDS2 = /* @__PURE__ */ new Set([
-    "env",
-    "sys",
-    "resp"
+  var CONTROL_KEYWORDS2 = /* @__PURE__ */ new Map([
+    ["if", "If"],
+    ["elseif", "ElseIf"],
+    ["elsif", "ElseIf"],
+    ["elif", "ElseIf"],
+    ["else", "Else"],
+    ["foreach", "ForEach"],
+    ["switch", "Switch"],
+    ["case", "Case"],
+    ["default", "Default"],
+    ["break", "break"],
+    ["continue", "continue"],
+    ["name", "Name"],
+    ["for", "for"],
+    ["in", "in"],
+    ["mark", "Mark"],
+    ["when", "when"],
+    ["not", "not"],
+    ["and", "and"],
+    ["or", "or"],
+    ["strfrag", "StrFrag"],
+    ["stringfrag", "StrFrag"],
+    ["rolesfrag", "RolesFrag"],
+    ["rolefrag", "RolesFrag"],
+    ["frag", "Frag"]
   ]);
-  var CONTROL_KEYWORDS2 = /* @__PURE__ */ new Set([
-    "If",
-    "ElseIf",
-    "Else",
-    "ForEach",
-    "Switch",
-    "Case",
-    "Default",
-    "break",
-    "continue",
-    "Name",
-    "for",
-    "in",
-    "Mark",
-    "when",
-    "not",
-    "and",
-    "or",
-    "StrFrag",
-    "RolesFrag",
-    "Frag"
+  var NAMESPACE_KEYWORDS2 = /* @__PURE__ */ new Map([
+    ["env", "env"],
+    ["sys", "sys"],
+    ["resp", "resp"],
+    ["prompt", "prompt"]
   ]);
+  var UNCONDITIONAL_NAMESPACES = /* @__PURE__ */ new Set(["env", "sys", "resp"]);
+  var DOT_ONLY_NAMESPACES = /* @__PURE__ */ new Set(["prompt"]);
   var LOGIC_OP = /* @__PURE__ */ new Set([
     "=",
     "!",
@@ -40251,7 +40598,11 @@ var ACDLEditor = (() => {
     ">",
     "&",
     "|",
-    "^"
+    "^",
+    "\u2260",
+    "\u2264",
+    "\u2265",
+    "\u2248"
   ]);
   var ARITH_OP = /* @__PURE__ */ new Set([
     "-",
@@ -40259,6 +40610,18 @@ var ACDLEditor = (() => {
     "%",
     "*",
     "/"
+  ]);
+  var OPERATOR_ALIASES = /* @__PURE__ */ new Map([
+    ["\u2212", "-"],
+    // minus sign
+    ["\u2013", "-"],
+    // en dash
+    ["\u2014", "-"],
+    // em dash
+    ["\xD7", "*"],
+    // multiplication sign
+    ["\xF7", "/"]
+    // division sign
   ]);
   var SYMBOLS = /* @__PURE__ */ new Set([
     ":",
@@ -40272,11 +40635,18 @@ var ACDLEditor = (() => {
     "[",
     "]",
     "@",
-    "#",
     "$",
     "?",
     "!",
     "_"
+  ]);
+  var QUOTE_PAIRS = /* @__PURE__ */ new Map([
+    ['"', '"'],
+    ["'", "'"],
+    ["\u201C", "\u201D"],
+    // “ ”
+    ["\u2018", "\u2019"]
+    // ‘ ’
   ]);
   var INVISIBLE = new Set(
     [
@@ -40312,43 +40682,48 @@ var ACDLEditor = (() => {
       }
       const ch = this.peek();
       if (ch === "/" && this.peekNext() === "/") {
-        return this.readComment();
+        return this.readLineComment(2);
       }
-      if (ch === "\u2026") {
+      if (ch === "#") {
+        return this.readLineComment(1);
+      }
+      if (ch === "/" && this.peekNext() === "*") {
+        return this.readBlockComment();
+      }
+      if (ch === "\u2026" || ch === "\u2025") {
         const col = this.col;
         this.advance();
         return { type: "RANGE", value: "\u2026", line: this.line, col };
       }
-      if (ch === ".") {
-        if (this.peekNext() === "." && this.input[this.pos + 2] === ".") {
-          const col = this.col;
-          this.advance();
-          this.advance();
-          this.advance();
-          return { type: "RANGE", value: "...", line: this.line, col };
-        }
-      }
-      if (LOGIC_OP.has(ch)) {
+      if (ch === "." && this.peekNext() === ".") {
         const col = this.col;
-        const value = this.advance();
+        this.advance();
+        this.advance();
+        if (this.peek() === ".") this.advance();
+        return { type: "RANGE", value: "...", line: this.line, col };
+      }
+      const normalized = OPERATOR_ALIASES.get(ch) ?? ch;
+      if (LOGIC_OP.has(normalized)) {
+        const col = this.col;
+        this.advance();
         return {
           type: "LOGIC_OP",
-          value,
+          value: normalized,
           line: this.line,
           col
         };
       }
-      if (ARITH_OP.has(ch)) {
+      if (ARITH_OP.has(normalized)) {
         const col = this.col;
-        const value = this.advance();
+        this.advance();
         return {
           type: "ARITH_OP",
-          value,
+          value: normalized,
           line: this.line,
           col
         };
       }
-      if (ch === '"') {
+      if (QUOTE_PAIRS.has(ch)) {
         return this.readString();
       }
       if (SYMBOLS.has(ch)) {
@@ -40360,13 +40735,23 @@ var ACDLEditor = (() => {
       if (this.isIdentStart(ch)) {
         return this.readIdentifier();
       }
+      if (/[\p{P}\p{S}]/u.test(ch)) {
+        return this.readSymbol();
+      }
       throw this.error(`Unexpected character '${ch}' (U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")})`);
     }
     /* ───────────── token readers ───────────── */
-    readComment() {
+    /**
+     * A `//` or `#` comment, running to end of line. `openerLength` is how many
+     * characters introduce it.
+     *
+     * Braces are ordinary comment text: stopping at "}" would make any comment
+     * quoting a code literal terminate early, leaving the remainder to be
+     * tokenized as source.
+     */
+    readLineComment(openerLength) {
       const startCol = this.col;
-      this.advance();
-      this.advance();
+      for (let i = 0; i < openerLength; i++) this.advance();
       let value = "";
       while (!this.isEOF() && this.peek() !== "\n") {
         value += this.advance();
@@ -40378,13 +40763,32 @@ var ACDLEditor = (() => {
         col: startCol
       };
     }
+    /** A slash-star comment, which may span lines. */
+    readBlockComment() {
+      const startCol = this.col;
+      const startLine = this.line;
+      this.advance();
+      this.advance();
+      let value = "";
+      while (!this.isEOF()) {
+        if (this.peek() === "*" && this.peekNext() === "/") {
+          this.advance();
+          this.advance();
+          return { type: "COMMENT", value: value.trim(), line: startLine, col: startCol };
+        }
+        value += this.advance();
+      }
+      throw this.error(`Unterminated block comment (opened at line ${startLine})`);
+    }
     readString() {
       const startCol = this.col;
+      const startLine = this.line;
+      const closer = QUOTE_PAIRS.get(this.peek());
       this.advance();
       let value = "";
       while (!this.isEOF()) {
         const ch = this.peek();
-        if (ch === '"') {
+        if (ch === closer) {
           this.advance();
           return {
             type: "STRING",
@@ -40396,12 +40800,15 @@ var ACDLEditor = (() => {
         if (ch === "\\") {
           this.advance();
           if (this.isEOF()) {
-            throw this.error("Unterminated string literal");
+            throw this.error(`Unterminated string literal (opened at line ${startLine})`);
           }
           const esc = this.advance();
           switch (esc) {
             case '"':
               value += '"';
+              break;
+            case "'":
+              value += "'";
               break;
             case "\\":
               value += "\\";
@@ -40413,16 +40820,17 @@ var ACDLEditor = (() => {
               value += "	";
               break;
             default:
-              throw this.error(`Invalid escape sequence \\${esc}`);
+              value += "\\" + esc;
+              break;
           }
           continue;
         }
         if (ch === "\n") {
-          throw this.error("Unterminated string literal");
+          throw this.error(`Unterminated string literal (opened at line ${startLine})`);
         }
         value += this.advance();
       }
-      throw this.error("Unterminated string literal");
+      throw this.error(`Unterminated string literal (opened at line ${startLine})`);
     }
     readSymbol() {
       const startCol = this.col;
@@ -40440,18 +40848,24 @@ var ACDLEditor = (() => {
       while (!this.isEOF() && this.isIdentPart(this.peek())) {
         value += this.advance();
       }
-      if (CONTROL_KEYWORDS2.has(value)) {
-        return {
-          type: "KEYWORD",
-          value,
-          line: this.line,
-          col: startCol
-        };
+      const lower = value.toLowerCase();
+      const namespace = NAMESPACE_KEYWORDS2.get(lower);
+      if (namespace) {
+        const dotOnly = DOT_ONLY_NAMESPACES.has(lower);
+        if (UNCONDITIONAL_NAMESPACES.has(value) || this.nextSignificantIsPathStart(dotOnly)) {
+          return {
+            type: "KEYWORD",
+            value: namespace,
+            line: this.line,
+            col: startCol
+          };
+        }
       }
-      if (NAMESPACE_KEYWORDS2.has(value)) {
+      const control = CONTROL_KEYWORDS2.get(lower);
+      if (control) {
         return {
           type: "KEYWORD",
-          value,
+          value: control,
           line: this.line,
           col: startCol
         };
@@ -40462,6 +40876,18 @@ var ACDLEditor = (() => {
         line: this.line,
         col: startCol
       };
+    }
+    /**
+     * Whether the next non-whitespace character starts a context-variable path —
+     * `.` for a field or `[` for an index. Used to decide whether a non-canonical
+     * casing such as `Env` is a namespace or an ordinary identifier.
+     */
+    nextSignificantIsPathStart(dotOnly) {
+      let i = this.pos;
+      while (i < this.input.length && isWhitespace(this.input[i])) i++;
+      const ch = this.input[i];
+      if (ch === "." && this.input[i + 1] !== ".") return true;
+      return !dotOnly && ch === "[";
     }
     readNumber() {
       const startCol = this.col;
@@ -40506,11 +40932,15 @@ var ACDLEditor = (() => {
     isDigit(ch) {
       return ch >= "0" && ch <= "9";
     }
+    /**
+     * Identifiers accept any Unicode letter, so a spec may name things in the
+     * language its authors actually work in.
+     */
     isIdentStart(ch) {
-      return /[a-zA-Z_]/.test(ch);
+      return /[\p{L}_]/u.test(ch);
     }
     isIdentPart(ch) {
-      return /[a-zA-Z0-9_]/.test(ch);
+      return /[\p{L}\p{N}_]/u.test(ch);
     }
     error(msg) {
       return new Error(`[${this.line}:${this.col}] ${msg}`);
@@ -40637,11 +41067,13 @@ var ACDLEditor = (() => {
       value: tok.value
     };
   }
-  var Parser2 = class {
+  var _Parser = class _Parser {
     constructor(input) {
       __publicField(this, "tokens", []);
       __publicField(this, "pos", 0);
       __publicField(this, "lastConsumedLine", 0);
+      /** Marks without an explicit number are numbered in source order. */
+      __publicField(this, "markCounter", 0);
       const scanner = new Scanner(input);
       let token;
       do {
@@ -40695,16 +41127,80 @@ var ACDLEditor = (() => {
       }
       return false;
     }
+    /**
+     * The role the token at `offset` introduces, or undefined if it introduces
+     * none. A role marker only counts as one when `:` or `{` follows: `a` and `t`
+     * are ordinary loop variables, and must not shadow the assistant and tool
+     * roles wherever they appear.
+     */
+    roleAt(offset = 0) {
+      const tok = this.tokens[this.pos + offset];
+      const next = this.tokens[this.pos + offset + 1];
+      if (!tok || tok.type !== "IDENT") return void 0;
+      if (!next || next.value !== ":" && next.value !== "{") return void 0;
+      return _Parser.ROLE_MARKERS.get(String(tok.value).toLowerCase());
+    }
+    /** Whether this token is the early-termination marker, in any casing. */
+    isEndMarker(tok) {
+      return tok.type === "IDENT" && _Parser.END_MARKERS.has(String(tok.value).toLowerCase());
+    }
+    /** `range(...)`, in any casing — the one built-in iterable. */
+    isRangeCall() {
+      const tok = this.peek();
+      return tok.type === "IDENT" && String(tok.value).toLowerCase() === "range" && this.peekNext().value === "(";
+    }
+    /**
+     * Consume the `:` that introduces a block body, if it is there. `S: { ... }`
+     * and `S { ... }` mean the same thing, as do `Spec[@T]: {` and `Spec[@T] {`.
+     */
+    matchOptionalColon() {
+      this.match("SYMBOL", ":");
+    }
+    /** Stray statement separators. ACDL has none, but muscle memory supplies them. */
+    skipSeparators() {
+      while (this.peek().type === "SYMBOL" && this.peek().value === ";") this.consume();
+    }
+    /**
+     * Drop a trailing `:` from a captured header expression. `Case user: {` and
+     * `If (x): {` read naturally and appear in the wild — the language reference's
+     * own worked example writes the former — but the colon is punctuation, not
+     * part of the expression, and must not reach the renderer.
+     */
+    trimTrailingColon(tokens) {
+      while (tokens.length) {
+        const last = tokens[tokens.length - 1];
+        if (last.type !== "SYMBOL" || last.value !== ":") break;
+        tokens.pop();
+      }
+      return tokens;
+    }
+    /** True when the current token closes a block, or the file has run out. */
+    atBlockEnd() {
+      return this.isEOF() || this.peek().value === "}";
+    }
+    /**
+     * Consume a block's closing brace, naming the line the block opened on when it
+     * is missing — far more useful than "expected }, got EOF" pointing at the last
+     * line of the file.
+     */
+    consumeBlockClose(openLine, what) {
+      if (this.isEOF()) {
+        const tok = this.peek();
+        throw new Error(`[${tok.line}:${tok.col}] Missing closing "}" for ${what} opened at line ${openLine}`);
+      }
+      this.consume("SYMBOL", "}");
+    }
     /* ───────────────── Grammar Rules (Outside Role) ───────────────── */
     /**
      * Entry Point: Prompt[indices]: { ... }
      */
     parsePrompt() {
       const title = this.parseTitle();
-      this.consume("SYMBOL", ":");
+      this.matchOptionalColon();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const body = this.parsePromptBody();
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, `prompt "${title.name}"`);
       console.log("parsed prompt");
       return prompt({ title, body });
     }
@@ -40715,6 +41211,8 @@ var ACDLEditor = (() => {
     parseFile() {
       const blocks = [];
       while (!this.isEOF()) {
+        this.skipSeparators();
+        if (this.isEOF()) break;
         const tok = this.peek();
         if (tok.type === "COMMENT") {
           const text = this.consume("COMMENT").value;
@@ -40737,6 +41235,8 @@ var ACDLEditor = (() => {
     parseFileWithRanges() {
       const ranges = [];
       while (!this.isEOF()) {
+        this.skipSeparators();
+        if (this.isEOF()) break;
         const tok = this.peek();
         const startLine = tok.line;
         let block;
@@ -40768,13 +41268,16 @@ var ACDLEditor = (() => {
         }
         this.consume("SYMBOL", "]");
       }
-      this.consume("SYMBOL", ":");
+      this.matchOptionalColon();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const body = [];
-      while (this.peek().type !== "EOF" && this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         body.push(this.parseRoleBuildingBlock());
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, `StrFrag "${name2}"`);
       console.log("parsed StrFrag definition");
       return strFragDef({ name: name2, params, body });
     }
@@ -40792,10 +41295,13 @@ var ACDLEditor = (() => {
         }
         this.consume("SYMBOL", "]");
       }
-      this.consume("SYMBOL", ":");
+      this.matchOptionalColon();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const body = [];
-      while (this.peek().type !== "EOF" && this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         if (this.peek().type === "COMMENT") {
           const text = this.consume("COMMENT").value;
           body.push(commentBlock({ text }));
@@ -40803,7 +41309,7 @@ var ACDLEditor = (() => {
         }
         body.push(this.parsePromptBodyItem());
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, `RolesFrag "${name2}"`);
       console.log("parsed RolesFrag definition");
       return rolesFragDef({ name: name2, params, body });
     }
@@ -40822,7 +41328,9 @@ var ACDLEditor = (() => {
       while (this.peek().type === "COMMENT") {
         this.pos++;
       }
-      const isCompletionPrompt = this.peek().type === "IDENT" && this.peek().value === "N";
+      const marker = this.peek();
+      const after = this.peekNext();
+      const isCompletionPrompt = marker.type === "IDENT" && _Parser.NONE_MARKERS.has(String(marker.value).toLowerCase()) && !!after && (after.value === ":" || after.value === "{");
       this.pos = savedPos;
       if (isCompletionPrompt) {
         return this.parseCompletionPromptBody();
@@ -40834,7 +41342,9 @@ var ACDLEditor = (() => {
      */
     parseChatPromptBody() {
       const body = [];
-      while (this.peek().type !== "EOF" && this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         if (this.peek().type === "COMMENT") {
           const text = this.consume("COMMENT").value;
           body.push(commentBlock({ text }));
@@ -40866,15 +41376,18 @@ var ACDLEditor = (() => {
      * Parse a NoneMessage: N: { RoleBuildingBlock* }
      */
     parseNoneMessage() {
-      this.consume("IDENT", "N");
-      this.consume("SYMBOL", ":");
+      this.consume("IDENT");
+      this.matchOptionalColon();
       const body = [];
       if (this.peek().value === "{") {
+        const openLine = this.peek().line;
         this.consume("SYMBOL", "{");
-        while (this.peek().type !== "EOF" && this.peek().value !== "}") {
+        while (!this.atBlockEnd()) {
+          this.skipSeparators();
+          if (this.atBlockEnd()) break;
           body.push(this.parseRoleBuildingBlock());
         }
-        this.consume("SYMBOL", "}");
+        this.consumeBlockClose(openLine, "N message");
       } else {
         const startLine = this.peek().line;
         body.push(this.parseRoleBuildingBlockSingleLine(startLine));
@@ -40891,7 +41404,7 @@ var ACDLEditor = (() => {
       const tok = this.peek();
       const nextTok = this.peekNext();
       const val = tok.value;
-      if (tok.type === "IDENT" && (val === "S" || val === "U" || val === "A" || val === "T")) {
+      if (this.roleAt()) {
         console.log("parsing role message");
         return this.parseRoleMessage();
       }
@@ -40900,6 +41413,8 @@ var ACDLEditor = (() => {
           case "If":
             return this.parseConditionalOutside();
           case "ForEach":
+            return this.parseLoopOutside();
+          case "for":
             return this.parseLoopOutside();
           case "Switch":
             return this.parseSwitchOutside();
@@ -40911,14 +41426,14 @@ var ACDLEditor = (() => {
             return this.parseRolesFragInvocation();
         }
       }
-      if (tok.type === "IDENT" && val === "PromptEndsHere") {
+      if (this.isEndMarker(tok)) {
         return this.parseEndBlock();
       }
       if (tok.type === "COMMENT") {
         const text = this.consume("COMMENT").value;
         return commentBlock({ text });
       }
-      throw new Error(`[${tok.line}:${tok.col}] Syntax Error: Unexpected token "${val}" in global scope.`);
+      throw new Error(`[${tok.line}:${tok.col}] Syntax Error: Unexpected token "${val}" in global scope. Expected a role message (S:, U:, A:, T:), control flow (If, ForEach, Switch), Mark, Name, Frag, or a comment.`);
     }
     /**
      * Parse a MarkBlock: MARK number { PromptBlock+ }
@@ -40926,11 +41441,14 @@ var ACDLEditor = (() => {
      */
     parseMarkBlock() {
       this.consume("KEYWORD", "Mark");
-      const numberTok = this.consume("NUMBER");
-      const markNumber = parseInt(numberTok.value, 10);
+      const markNumber = this.parseMarkNumber();
+      this.matchOptionalColon();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const blocks = [];
-      do {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         if (this.peek().type === "COMMENT") {
           const text = this.consume("COMMENT").value;
           blocks.push(commentBlock({ text }));
@@ -40938,8 +41456,8 @@ var ACDLEditor = (() => {
         }
         const innerBlock = this.parseTopLevelBlock();
         blocks.push(innerBlock);
-      } while (this.peek().value !== "}");
-      this.consume("SYMBOL", "}");
+      }
+      this.consumeBlockClose(openLine, `Mark ${markNumber}`);
       return markBlock({ markNumber, body: blocks });
     }
     /**
@@ -40948,11 +41466,14 @@ var ACDLEditor = (() => {
      */
     parseMarkBlockInside() {
       this.consume("KEYWORD", "Mark");
-      const numberTok = this.consume("NUMBER");
-      const markNumber = parseInt(numberTok.value, 10);
+      const markNumber = this.parseMarkNumber();
+      this.matchOptionalColon();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const blocks = [];
-      do {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         if (this.peek().type === "COMMENT") {
           const text = this.consume("COMMENT").value;
           blocks.push(commentBlock({ text }));
@@ -40960,26 +41481,41 @@ var ACDLEditor = (() => {
         }
         const innerBlock = this.parseRoleBuildingBlock();
         blocks.push(innerBlock);
-      } while (this.peek().value !== "}");
-      this.consume("SYMBOL", "}");
+      }
+      this.consumeBlockClose(openLine, `Mark ${markNumber}`);
       return markBlockInsideRole({ markNumber, body: blocks });
+    }
+    /**
+     * A mark's number is purely presentational, so an omitted one is not worth an
+     * error: unnumbered marks are numbered in source order, continuing from the
+     * highest number the file has used so far.
+     */
+    parseMarkNumber() {
+      if (this.peek().type === "NUMBER") {
+        const explicit = parseInt(this.consume("NUMBER").value, 10);
+        this.markCounter = Math.max(this.markCounter, explicit);
+        return explicit;
+      }
+      return ++this.markCounter;
     }
     /*
      * RoleMessage = ROLE_ID: { RoleBuildingBlock* } | ROLE_ID: RoleBuildingBlock
      * Supports both multi-line blocks with curly braces and single-line without braces
     */
     parseRoleMessage() {
-      const roleId = this.consume("IDENT").value;
-      this.consume("SYMBOL", ":");
-      const roleMap = { "S": "system", "U": "user", "A": "assistant", "T": "tool" };
-      const role = roleMap[roleId];
+      const role = this.roleAt();
+      this.consume("IDENT");
+      this.matchOptionalColon();
       const body = [];
       if (this.peek().value === "{") {
+        const openLine = this.peek().line;
         this.consume("SYMBOL", "{");
-        while (this.peek().type !== "EOF" && this.peek().value !== "}") {
+        while (!this.atBlockEnd()) {
+          this.skipSeparators();
+          if (this.atBlockEnd()) break;
           body.push(this.parseRoleBuildingBlock());
         }
-        this.consume("SYMBOL", "}");
+        this.consumeBlockClose(openLine, `${role} message`);
       } else {
         const startLine = this.peek().line;
         body.push(this.parseRoleBuildingBlockSingleLine(startLine));
@@ -40997,10 +41533,14 @@ var ACDLEditor = (() => {
         throw new Error(`[${tok.line}:${tok.col}] Single-line role syntax cannot span multiple lines`);
       }
       const val = tok.value;
+      if (tok.type === "SYMBOL" && val === "$") {
+        return this.parseNameRef();
+      }
       if (tok.type === "KEYWORD") {
-        if (val === "If" || val === "ForEach" || val === "Switch") {
-          throw new Error(`[${tok.line}:${tok.col}] Control flow statements not allowed in single-line role syntax`);
+        if (val === "If" || val === "ForEach" || val === "for" || val === "Switch") {
+          throw new Error(`[${tok.line}:${tok.col}] Control flow statements not allowed in single-line role syntax. Use the braced form: ${this.tokens[this.pos - 2]?.value ?? "U"}: { ... }`);
         }
+        if (val === "Frag") return this.parseStrFragInvocation();
         const namespaces = ["env", "sys", "resp", "prompt"];
         if (namespaces.includes(val)) {
           return this.parseContextVar();
@@ -41026,7 +41566,7 @@ var ACDLEditor = (() => {
       }
       if (tok.type === "KEYWORD") {
         if (val === "If") return this.parseConditionalInside();
-        if (val === "ForEach") return this.parseLoopInside();
+        if (val === "ForEach" || val === "for") return this.parseLoopInside();
         if (val === "Switch") return this.parseSwitchInside();
         if (val === "Mark") return this.parseMarkBlockInside();
         if (val === "Name") return this.parseNameDef();
@@ -41040,11 +41580,11 @@ var ACDLEditor = (() => {
           return this.parseContextVar();
         }
       }
-      if (tok.type === "IDENT" && val === "PromptEndsHere") {
+      if (this.isEndMarker(tok)) {
         return this.parseEndBlock();
       }
       if (tok.type === "IDENT") return this.parseTemplateOrFunc();
-      throw new Error(`[${tok.line}:${tok.col}] Unexpected ${tok.type} (${val}) inside role.`);
+      throw new Error(`[${tok.line}:${tok.col}] Unexpected ${tok.type} (${val}) inside role. Expected a context variable, template, function, control flow, Name, Frag, or a comment.`);
     }
     /* ───────────────── Name Definitions ───────────────── */
     /**
@@ -41054,8 +41594,7 @@ var ACDLEditor = (() => {
     parseNameDef() {
       this.consume("KEYWORD", "Name");
       const varName = this.consume("IDENT").value;
-      this.consume("SYMBOL", ":");
-      this.consume("LOGIC_OP", "=");
+      this.consumeAssignment(varName);
       const tok = this.peek();
       let value;
       if (tok.type === "SYMBOL" && tok.value === "[") {
@@ -41075,6 +41614,18 @@ var ACDLEditor = (() => {
         throw new Error(`[${tok.line}:${tok.col}] Expected ContextVar, Func, list comprehension, or Frag invocation after :=, got ${tok.type}`);
       }
       return nameDef({ name: varName, value });
+    }
+    /**
+     * The binding operator of a name definition. Canonically `:=`; a bare `=` or
+     * `:` is accepted too, since both are what people reach for first and neither
+     * is ambiguous in this position.
+     */
+    consumeAssignment(varName) {
+      const sawColon = this.match("SYMBOL", ":");
+      const sawEquals = this.match("LOGIC_OP", "=");
+      if (sawColon || sawEquals) return;
+      const tok = this.peek();
+      throw new Error(`[${tok.line}:${tok.col}] Expected ":=" after "Name ${varName}", got "${tok.value}"`);
     }
     /**
      * Parse a list comprehension: [expr for var in iterable]
@@ -41102,7 +41653,7 @@ var ACDLEditor = (() => {
       const variable = this.consume("IDENT").value;
       this.consume("KEYWORD", "in");
       let iterable;
-      if (this.peek().value === "range" && this.peekNext().value === "(") {
+      if (this.isRangeCall()) {
         iterable = this.parseRangeExpr();
       } else {
         const iterTokens = [];
@@ -41224,10 +41775,11 @@ var ACDLEditor = (() => {
     parseTextArgs() {
       const args = [];
       if (this.peek().value === ")" || this.peek().value === "]") return args;
-      do {
-        const arg = this.parseSingleTextArg();
-        args.push(arg);
-      } while (this.match("SYMBOL", ","));
+      while (true) {
+        args.push(this.parseSingleTextArg());
+        if (!this.match("SYMBOL", ",")) break;
+        if (this.peek().value === ")" || this.peek().value === "]") break;
+      }
       return args;
     }
     /** Parse a single argument, which may be an arithmetic expression */
@@ -41366,49 +41918,81 @@ var ACDLEditor = (() => {
      * Condition is delimited by parentheses, same style as conditionals.
      */
     parseEndBlock() {
-      this.consume("IDENT", "PromptEndsHere");
-      this.consume("KEYWORD", "when");
-      this.consume("SYMBOL", "(");
+      const marker = this.consume("IDENT");
+      this.match("KEYWORD", "when");
       const conditionTokens = [];
-      let depth = 1;
-      while (depth > 0) {
-        if (this.isEOF()) throw new Error("Unterminated PromptEndsHere when condition");
-        const tok = this.consume();
-        if (tok.value === "(") depth++;
-        if (tok.value === ")") depth--;
-        if (depth > 0) {
-          conditionTokens.push(toExprToken(tok));
+      if (this.match("SYMBOL", "(")) {
+        let depth = 1;
+        while (depth > 0) {
+          if (this.isEOF()) {
+            throw new Error(`[${marker.line}:${marker.col}] Unterminated PromptEndsHere condition`);
+          }
+          const tok = this.consume();
+          if (tok.value === "(") depth++;
+          if (tok.value === ")") depth--;
+          if (depth > 0) {
+            conditionTokens.push(toExprToken(tok));
+          }
+        }
+      } else {
+        const line = this.peek().line;
+        while (!this.isEOF() && this.peek().line === line && this.peek().type !== "COMMENT" && this.peek().value !== "{" && this.peek().value !== "}") {
+          conditionTokens.push(toExprToken(this.consume()));
+        }
+        if (conditionTokens.length === 0) {
+          throw new Error(`[${marker.line}:${marker.col}] PromptEndsHere needs a condition, e.g. PromptEndsHere when (@t == @T)`);
         }
       }
-      return endBlock({ condition: conditionTokens });
+      return endBlock({ condition: this.trimTrailingColon(conditionTokens) });
     }
-    parseLoopOutside() {
-      this.consume("KEYWORD", "ForEach");
-      this.consume("SYMBOL", "(");
+    /**
+     * The header of a ForEach, shared by both scopes: `ForEach(v: iterable)`,
+     * `ForEach v in iterable`, and every combination in between. The parentheses
+     * are optional, and the separator may be `:` or `in`.
+     */
+    parseLoopHeader() {
+      this.consume("KEYWORD");
+      const parenthesised = this.match("SYMBOL", "(");
       const index = this.parseIndex();
-      this.consume("SYMBOL", ":");
+      if (!this.match("SYMBOL", ":") && !this.match("KEYWORD", "in")) {
+        const tok = this.peek();
+        throw new Error(`[${tok.line}:${tok.col}] Expected ":" or "in" between the loop variable and its iterable, got "${tok.value}"`);
+      }
       let iterable;
-      if (this.peek().value === "range" && this.peekNext().value === "(") {
+      if (this.isRangeCall()) {
         iterable = this.parseRangeExpr();
       } else {
         const iterTokens = [];
-        while (!(this.peek().value === ")" && this.peekNext().value === "{")) {
+        let depth = 0;
+        while (true) {
           if (this.isEOF()) throw new Error("Unterminated ForEach iterable");
+          const tok = this.peek();
+          if (depth === 0 && (tok.value === "{" || parenthesised && tok.value === ")")) break;
+          if (tok.value === "(") depth++;
+          if (tok.value === ")") depth--;
           iterTokens.push(toExprToken(this.consume()));
         }
-        iterable = Iterable({ tokens: iterTokens });
+        iterable = Iterable({ tokens: this.trimTrailingColon(iterTokens) });
       }
-      this.consume("SYMBOL", ")");
+      if (parenthesised) this.consume("SYMBOL", ")");
+      this.matchOptionalColon();
+      return { index, iterable };
+    }
+    parseLoopOutside() {
+      const { index, iterable } = this.parseLoopHeader();
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const body = [];
-      while (this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         body.push(this.parseTopLevelBlock());
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, "ForEach body");
       return loopBlockOutsideRole({ index, iterable, body });
     }
     parseRangeExpr() {
-      this.consume("IDENT", "range");
+      this.consume("IDENT");
       this.consume("SYMBOL", "(");
       const start = [];
       let depth = 0;
@@ -41446,44 +42030,48 @@ var ACDLEditor = (() => {
       return rangeExpr({ start, end, step });
     }
     parseConditionalOutside() {
-      this.consume("KEYWORD", "If");
-      const ifCondTokens = [];
-      while (this.peek().value !== "{") {
-        if (this.isEOF()) throw new Error("Unterminated If condition");
-        ifCondTokens.push(toExprToken(this.consume()));
-      }
+      const ifTok = this.consume("KEYWORD", "If");
+      const ifCondTokens = this.parseConditionHeader("If");
+      let openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const ifBody = [];
-      while (this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         ifBody.push(this.parseTopLevelBlock());
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, `If body (line ${ifTok.line})`);
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
       while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
         this.skipComments();
-        const type = this.consume().value;
+        const branch = this.consume();
+        const type = this.resolveElseBranch(branch.value);
         if (type === "ElseIf") {
-          const eiCondTokens = [];
-          while (this.peek().value !== "{") {
-            eiCondTokens.push(toExprToken(this.consume()));
-          }
+          const eiCondTokens = this.parseConditionHeader("ElseIf");
+          openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const eiBody = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             eiBody.push(this.parseTopLevelBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `ElseIf body (line ${branch.line})`);
           elseIfConditions.push(eiCondTokens);
           elseIfBodies.push(eiBody);
         } else if (type === "Else") {
+          this.matchOptionalColon();
+          openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const eBody = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             eBody.push(this.parseTopLevelBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Else body (line ${branch.line})`);
           elseBody = eBody;
           break;
         }
@@ -41496,68 +42084,97 @@ var ACDLEditor = (() => {
         elseBody
       });
     }
-    parseLoopInside() {
-      this.consume("KEYWORD", "ForEach");
-      this.consume("SYMBOL", "(");
-      const index = this.parseIndex();
-      this.consume("SYMBOL", ":");
-      let iterable;
-      if (this.peek().value === "range" && this.peekNext().value === "(") {
-        iterable = this.parseRangeExpr();
-      } else {
-        const iterTokens = [];
-        while (!(this.peek().value === ")" && this.peekNext().value === "{")) {
-          if (this.isEOF()) throw new Error("Unterminated ForEach iterable");
-          iterTokens.push(toExprToken(this.consume()));
+    /**
+     * Capture a condition, which runs from after the keyword to the `{` that opens
+     * the body. Surrounding parentheses are conventional but not required, and a
+     * trailing `:` before the brace is punctuation rather than part of the
+     * expression.
+     */
+    parseConditionHeader(keyword2) {
+      const tokens = [];
+      while (this.peek().value !== "{") {
+        if (this.isEOF()) {
+          const tok = this.peek();
+          throw new Error(`[${tok.line}:${tok.col}] Unterminated ${keyword2} condition: expected "{" to open the body`);
         }
-        iterable = Iterable({ tokens: iterTokens });
+        tokens.push(toExprToken(this.consume()));
       }
-      this.consume("SYMBOL", ")");
+      if (tokens.length === 0) {
+        const tok = this.peek();
+        throw new Error(`[${tok.line}:${tok.col}] ${keyword2} needs a condition before "{"`);
+      }
+      return this.trimTrailingColon(tokens);
+    }
+    /**
+     * Which branch an Else-family keyword opens. `Else If` written as two words is
+     * the same construct as `ElseIf`, so the `If` is absorbed here.
+     */
+    resolveElseBranch(keyword2) {
+      if (keyword2 === "Else" && this.peekSkippingComments()?.value === "If") {
+        this.skipComments();
+        this.consume("KEYWORD", "If");
+        return "ElseIf";
+      }
+      return keyword2;
+    }
+    parseLoopInside() {
+      const header = this.parseLoopHeader();
+      const index = header.index;
+      const iterable = header.iterable;
+      const openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const body = [];
-      while (this.peek().value !== "}") body.push(this.parseRoleBuildingBlock());
-      this.consume("SYMBOL", "}");
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
+        body.push(this.parseRoleBuildingBlock());
+      }
+      this.consumeBlockClose(openLine, "ForEach body");
       return loopBlockInsideRole({ index, iterable, body });
     }
     parseConditionalInside() {
-      this.consume("KEYWORD", "If");
-      const ifCondTokens = [];
-      while (this.peek().value !== "{") {
-        if (this.isEOF()) throw new Error("Unterminated If condition");
-        ifCondTokens.push(toExprToken(this.consume()));
-      }
+      const ifTok = this.consume("KEYWORD", "If");
+      const ifCondTokens = this.parseConditionHeader("If");
+      let openLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const ifBody = [];
-      while (this.peek().value !== "}") {
+      while (!this.atBlockEnd()) {
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
         ifBody.push(this.parseRoleBuildingBlock());
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(openLine, `If body (line ${ifTok.line})`);
       const elseIfConditions = [];
       const elseIfBodies = [];
       let elseBody = void 0;
       while (this.peekSkippingComments()?.type === "KEYWORD" && (this.peekSkippingComments().value === "ElseIf" || this.peekSkippingComments().value === "Else")) {
         this.skipComments();
-        const type = this.consume().value;
+        const branch = this.consume();
+        const type = this.resolveElseBranch(branch.value);
         if (type === "ElseIf") {
-          const eiCondTokens = [];
-          while (this.peek().value !== "{") {
-            eiCondTokens.push(toExprToken(this.consume()));
-          }
+          const eiCondTokens = this.parseConditionHeader("ElseIf");
+          openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const eiBody = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             eiBody.push(this.parseRoleBuildingBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `ElseIf body (line ${branch.line})`);
           elseIfConditions.push(eiCondTokens);
           elseIfBodies.push(eiBody);
         } else if (type === "Else") {
+          this.matchOptionalColon();
+          openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const eBody = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             eBody.push(this.parseRoleBuildingBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Else body (line ${branch.line})`);
           elseBody = eBody;
           break;
         }
@@ -41572,43 +42189,47 @@ var ACDLEditor = (() => {
     }
     // parseSwitchOutside and parseSwitchInside would follow the same scoping pattern.
     parseSwitchOutside() {
-      this.consume("KEYWORD", "Switch");
-      const exprTokens = [];
-      while (this.peek().value !== "{") {
-        if (this.isEOF()) throw new Error("Expected '{' after Switch expression");
-        exprTokens.push(toExprToken(this.consume()));
-      }
+      const switchTok = this.consume("KEYWORD", "Switch");
+      const exprTokens = this.parseConditionHeader("Switch");
+      const switchOpenLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
       while (true) {
         this.skipComments();
-        if (this.peek().value === "}") break;
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
+        const branch = this.peek();
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
-          const matchTokens = [];
-          while (this.peek().value !== "{") {
-            if (this.isEOF()) throw new Error("Expected '{' after Case match");
-            matchTokens.push(toExprToken(this.consume()));
-          }
+          const matchTokens = this.parseConditionHeader("Case");
+          const openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const body = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             body.push(this.parseTopLevelBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Case body (line ${branch.line})`);
           cases.push(caseBlockOutsideRole({ match: matchTokens, body }));
         } else if (kw === "Default") {
+          this.matchOptionalColon();
+          const openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const body = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             body.push(this.parseTopLevelBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Default body (line ${branch.line})`);
           defaultCase = defaultCaseBlockOutsideRole({ body });
+        } else {
+          throw new Error(`[${branch.line}:${branch.col}] Unexpected "${kw}" inside Switch: expected Case or Default`);
         }
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(switchOpenLine, `Switch (line ${switchTok.line})`);
       return switchBlockOutsideRole({
         expression: exprTokens,
         cases,
@@ -41616,43 +42237,47 @@ var ACDLEditor = (() => {
       });
     }
     parseSwitchInside() {
-      this.consume("KEYWORD", "Switch");
-      const exprTokens = [];
-      while (this.peek().value !== "{") {
-        if (this.isEOF()) throw new Error("Expected '{' after Switch expression");
-        exprTokens.push(toExprToken(this.consume()));
-      }
+      const switchTok = this.consume("KEYWORD", "Switch");
+      const exprTokens = this.parseConditionHeader("Switch");
+      const switchOpenLine = this.peek().line;
       this.consume("SYMBOL", "{");
       const cases = [];
       let defaultCase;
       while (true) {
         this.skipComments();
-        if (this.peek().value === "}") break;
+        this.skipSeparators();
+        if (this.atBlockEnd()) break;
+        const branch = this.peek();
         const kw = this.consume("KEYWORD").value;
         if (kw === "Case") {
-          const matchTokens = [];
-          while (this.peek().value !== "{") {
-            if (this.isEOF()) throw new Error("Expected '{' after Case match");
-            matchTokens.push(toExprToken(this.consume()));
-          }
+          const matchTokens = this.parseConditionHeader("Case");
+          const openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const body = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             body.push(this.parseRoleBuildingBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Case body (line ${branch.line})`);
           cases.push(caseBlockInsideRole({ match: matchTokens, body }));
         } else if (kw === "Default") {
+          this.matchOptionalColon();
+          const openLine = this.peek().line;
           this.consume("SYMBOL", "{");
           const body = [];
-          while (this.peek().value !== "}") {
+          while (!this.atBlockEnd()) {
+            this.skipSeparators();
+            if (this.atBlockEnd()) break;
             body.push(this.parseRoleBuildingBlock());
           }
-          this.consume("SYMBOL", "}");
+          this.consumeBlockClose(openLine, `Default body (line ${branch.line})`);
           defaultCase = defaultCaseBlockInsideRole({ body });
+        } else {
+          throw new Error(`[${branch.line}:${branch.col}] Unexpected "${kw}" inside Switch: expected Case or Default`);
         }
       }
-      this.consume("SYMBOL", "}");
+      this.consumeBlockClose(switchOpenLine, `Switch (line ${switchTok.line})`);
       return switchBlockInsideRole({
         expression: exprTokens,
         cases,
@@ -41669,6 +42294,37 @@ var ACDLEditor = (() => {
       return this.peek().type === "EOF";
     }
   };
+  /* ───────────────── Tolerances ─────────────────
+   *
+   * ACDL source is written by hand and by models, and neither reliably produces
+   * the canonical spelling of everything. The parser therefore accepts the
+   * obvious variants — punctuation people expect to be optional, separators they
+   * reach for out of habit — and normalises them into the canonical AST, so the
+   * rendered diagram looks the same however the source was typed.
+   */
+  /**
+   * Role markers, by the spellings people actually write. The AST always stores
+   * the canonical role, so rendering is unaffected by which spelling was used.
+   */
+  __publicField(_Parser, "ROLE_MARKERS", /* @__PURE__ */ new Map([
+    ["s", "system"],
+    ["system", "system"],
+    ["u", "user"],
+    ["user", "user"],
+    ["a", "assistant"],
+    ["assistant", "assistant"],
+    ["t", "tool"],
+    ["tool", "tool"]
+  ]));
+  /** The completion-format marker, `N:`. */
+  __publicField(_Parser, "NONE_MARKERS", /* @__PURE__ */ new Set(["n", "none"]));
+  /** Spellings of the early-termination marker. */
+  __publicField(_Parser, "END_MARKERS", /* @__PURE__ */ new Set([
+    "promptendshere",
+    "prompt_ends_here",
+    "promptends"
+  ]));
+  var Parser2 = _Parser;
 
   // src/editor/acdl-lint.ts
   var acdlLinter = linter((view) => {
